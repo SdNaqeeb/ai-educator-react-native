@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet, Image, Dimensions } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import MathRichText from "./MathRichText";
 
 const { width } = Dimensions.get("window");
 
@@ -21,7 +22,7 @@ const QuestionDisplay = ({ question, showHint = false }) => {
           <Text style={styles.questionTitle}>Question</Text>
         </View>
 
-        <Text style={styles.questionText}>{question.question}</Text>
+        <MathRichText content={question.question} />
 
         {question.image && (
           <View style={styles.imageContainer}>

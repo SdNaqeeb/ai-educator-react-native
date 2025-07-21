@@ -373,15 +373,16 @@ const ResultScreen = () => {
             {comment && (
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Comments:</Text>
-                <Text style={styles.sectionContent}>{comment}</Text>
+                {/* <Text >{comment}</Text>  */}
+                 <MathRichText content={comment} />
               </View>
             )}
             {formated_concepts_used && (
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Concepts Used:</Text>
-                <Text style={styles.sectionContent}>
-                  {formated_concepts_used}
-                </Text>
+                <Text style={styles.sectionContent}> </Text>
+                <MathRichText content={formated_concepts_used} /> 
+               
               </View>
             )}
           </View>
@@ -406,15 +407,14 @@ const ResultScreen = () => {
             {comment && (
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Comments:</Text>
-                <Text style={styles.sectionContent}>{comment}</Text>
+                {/* <Text style={styles.sectionContent}>{comment}</Text> */}
+                <MathRichText content={comment} />
               </View>
             )}
             {formated_concepts_used && (
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Concepts Used:</Text>
-                <Text style={styles.sectionContent}>
-                  {formated_concepts_used}
-                </Text>
+                 <MathRichText content={formated_concepts_used} /> 
               </View>
             )}
           </View>
@@ -426,7 +426,7 @@ const ResultScreen = () => {
             <View style={styles.section}>
             <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Student Answer:</Text>
-                <MarkdownWithMath content={student_answer} />
+                <MathRichText content={student_answer} />
               </View>
               <Text style={styles.sectionTitle}>AI Solution:</Text>
               {question_image_base64 && (
@@ -444,15 +444,13 @@ const ResultScreen = () => {
             {comment && (
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Comments:</Text>
-                <Text style={styles.sectionContent}>{comment}</Text>
+                <MathRichText style={styles.sectionContent} content={comment} />
               </View>
             )}
             {formated_concepts_used && (
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Concepts Required:</Text>
-                <Text style={styles.sectionContent}>
-                  {formated_concepts_used}
-                </Text>
+                <MathRichText content={formated_concepts_used} /> 
               </View>
             )}
           </View>
@@ -493,9 +491,9 @@ const ResultScreen = () => {
                             <Text style={styles.exampleText}>
                             {conceptItem.example && (
                           <View className="example-content">
-                            {conceptItem.example.problem}
+                             <MathRichText content={conceptItem.example.problem} />  
                             <Text className='example-header'>Solution:</Text>
-                           {conceptItem.example.solution} 
+                            <MathRichText content={conceptItem.example.solution} /> 
                           </View>
                           
                         )}
@@ -505,9 +503,10 @@ const ResultScreen = () => {
                         <Text style={styles.explanationTitle}>
                           Explanation:
                         </Text>
-                        <Text style={styles.explanationText}>
+                        {/* <Text style={styles.explanationText}>
                           {conceptItem.explanation}
-                        </Text>
+                        </Text> */}
+                           <MathRichText content={conceptItem.explanation} />
                       </View>
                     )}
                   </View>
@@ -517,15 +516,13 @@ const ResultScreen = () => {
             {comment && (
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Comments:</Text>
-                <Text style={styles.sectionContent}>{comment}</Text>
+                <MathRichText content={comment} />
               </View>
             )}
             {formated_concepts_used && (
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Concepts Used:</Text>
-                <Text style={styles.sectionContent}>
-                  {formated_concepts_used}
-                </Text>
+                <MathRichText content={formated_concepts_used} /> 
               </View>
             )}
           </View>
