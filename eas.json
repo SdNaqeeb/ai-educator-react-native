@@ -12,9 +12,23 @@
       "distribution": "internal"
     },
     "production": {
-      "autoIncrement": true
-    }
-  },
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease",
+        "env": {
+          "EXPO_OPTIMIZE_SIZE": "1"
+        }
+      },
+      "ios": {
+        
+      }
+    },
+    "my_apk_build_profile": { 
+      "android": {
+        "buildType": "apk",
+        "distribution": "internal"
+      }
+    }  },
   "submit": {
     "production": {}
   }

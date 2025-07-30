@@ -536,7 +536,7 @@ const SolveQuestionScreen = () => {
         <View style={styles.headerTop}>
           <TouchableOpacity
             style={styles.headerButton}
-            onPress={() =>   navigation.pop(2)}
+            onPress={() =>   navigation.navigate("StudentTabs")}
             disabled={isAnyButtonProcessing()}
           >
             <Ionicons name="arrow-back" size={24} color="#ffffff" />

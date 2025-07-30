@@ -15,7 +15,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import axiosInstance from "../api/axiosInstance";
-import MarkdownWithMath from "../components/MarkdownWithMath";
+import MathRichText from "../components/MathRichText";
 
 const { width } = Dimensions.get("window");
 
@@ -205,7 +205,7 @@ const SimilarQuestionsScreen = () => {
               return (
                 <View key={index} style={styles.conceptPoint}>
                   <Text style={styles.bulletPoint}>•</Text>
-                  <MarkdownWithMath
+                  <MathRichText
                     content={trimmedPara.substring(1).trim()}
                     style={styles.conceptText}
                   />
@@ -261,7 +261,7 @@ const SimilarQuestionsScreen = () => {
         {/* Original Question Card */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Original Question</Text>
-          <MarkdownWithMath
+          <MathRichText
             content={originalQuestion || "No question available"}
             style={styles.questionText}
           />
@@ -281,7 +281,7 @@ const SimilarQuestionsScreen = () => {
         {similarQuestions && similarQuestions.similar_question && (
           <View style={[styles.card, styles.practiceCard]}>
             <Text style={styles.cardTitle}>Practice Question</Text>
-            <MarkdownWithMath
+            <MathRichText
               content={similarQuestions.similar_question}
               style={styles.questionText}
             />

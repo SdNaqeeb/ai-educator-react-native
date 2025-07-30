@@ -1,50 +1,252 @@
-# Welcome to your Expo app 👋
+# AI Educator Mobile App
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A professional React Native mobile application converted from the original ReactJS web app. This app provides a comprehensive AI-powered learning platform for students with features like question solving, progress tracking, analytics, and more.
 
-## Get started
+## 🚀 Features
 
-1. Install dependencies
+- **Authentication**: Secure login/signup with role-based access (Student/Teacher)
+- **Question Generation**: Generate questions by class, subject, and chapter
+- **Camera Integration**: Capture handwritten answers with OCR support
+- **Progress Tracking**: Monitor learning progress with XP, levels, and achievements
+- **Analytics Dashboard**: Detailed analytics and performance metrics
+- **Leaderboard**: Competitive learning with rankings
+- **Quests & Challenges**: Gamified learning experience
+- **Chat Assistant**: AI-powered learning assistant
+- **Real-time Notifications**: Push notifications for achievements and updates
+- **Offline Support**: Continue learning even without internet
 
-   ```bash
-   npm install
-   ```
+## 📱 Tech Stack
 
-2. Start the app
+- **Framework**: React Native (Expo)
+- **Navigation**: React Navigation 6
+- **State Management**: React Context API
+- **Networking**: Axios
+- **UI Components**: Custom components with Expo Vector Icons
+- **Animations**: React Native Reanimated & Expo Linear Gradient
+- **Camera**: Expo Camera & Image Picker
+- **Notifications**: Expo Notifications
+- **Secure Storage**: Expo Secure Store
+- **Sound**: Expo AV
 
-   ```bash
-   npx expo start
-   ```
+## 🛠️ Installation & Setup
 
-In the output, you'll find options to open the app in a
+### Prerequisites
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+- Node.js (v16 or higher)
+- npm or yarn
+- Expo CLI
+- iOS Simulator (for iOS development)
+- Android Studio (for Android development)
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+### Step 1: Install Dependencies
 
 ```bash
-npm run reset-project
+cd ai-student-react-native
+npm install
+# or
+yarn install
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### Step 2: Install Expo CLI (if not already installed)
 
-## Learn more
+```bash
+npm install -g @expo/cli
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+### Step 3: Start the Development Server
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+```bash
+expo start
+# or
+npm start
+```
 
-## Join the community
+### Step 4: Run on Device/Simulator
 
-Join our community of developers creating universal apps.
+- **iOS**: Press `i` in the terminal or scan QR code with Expo Go app
+- **Android**: Press `a` in the terminal or scan QR code with Expo Go app
+- **Web**: Press `w` in the terminal
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## 📦 Build for Production
+
+### Android APK
+
+```bash
+expo build:android
+```
+
+### iOS App
+
+```bash
+expo build:ios
+```
+
+### Using EAS Build (Recommended)
+
+```bash
+npm install -g @expo/eas-cli
+eas build --platform android
+eas build --platform ios
+```
+
+## 🔧 Configuration
+
+### Backend URL
+
+Update the backend URL in `src/api/axiosInstance.js`:
+
+```javascript
+const BASE_URL = "https://your-backend-url.com/";
+```
+
+### App Configuration
+
+Modify `app.json` for app-specific settings:
+
+- App name and slug
+- Icons and splash screen
+- Permissions
+- Push notification settings
+
+## 📁 Project Structure
+
+```
+ai-student-react-native/
+├── src/
+│   ├── api/                 # API configuration
+│   ├── components/          # Reusable UI components
+│   ├── contexts/           # React Context providers
+│   ├── navigation/         # Navigation configuration
+│   ├── screens/            # Screen components
+│   ├── utils/              # Utility functions
+│   └── hooks/              # Custom hooks
+├── assets/                 # Static assets (images, sounds, fonts)
+├── App.js                  # Main app entry point
+├── app.json               # Expo configuration
+├── package.json           # Dependencies and scripts
+└── README.md              # This file
+```
+
+## 🔑 Key Components
+
+### Authentication Flow
+
+- `LoginScreen.js` - User authentication
+- `SignupScreen.js` - User registration
+- `AuthContext.js` - Authentication state management
+
+### Main Features
+
+- `StudentDashScreen.js` - Main dashboard for students
+- `SolveQuestionScreen.js` - Question solving interface
+- `QuestionGeneratorForm.js` - Question selection form
+- `CameraCapture.js` - Answer capture functionality
+
+### Navigation
+
+- `RootNavigator.js` - Main navigation structure
+- Tab-based navigation for main features
+- Stack navigation for detailed views
+
+## 🎨 UI/UX Features
+
+- **Modern Design**: Clean, professional interface
+- **Dark Mode Support**: Automatic theme switching
+- **Responsive Layout**: Optimized for all screen sizes
+- **Smooth Animations**: Enhanced user experience
+- **Accessibility**: Voice-over and screen reader support
+
+## 📊 State Management
+
+The app uses React Context API for state management:
+
+- `AuthContext` - User authentication
+- `ProgressContext` - Learning progress tracking
+- `NotificationContext` - Push notifications
+- `LeaderboardContext` - Rankings and competition
+- `QuestContext` - Challenges and achievements
+
+## 🔔 Notifications
+
+Expo Notifications is used for:
+
+- Achievement unlocks
+- Study reminders
+- Progress milestones
+- Homework deadlines
+
+## 📷 Camera Integration
+
+- **Image Capture**: Take photos of handwritten answers
+- **Gallery Selection**: Choose images from device gallery
+- **OCR Processing**: Extract text from images (backend)
+
+## 🎵 Sound Effects
+
+Enhanced learning experience with:
+
+- Correct/incorrect answer sounds
+- Achievement unlocks
+- Level up celebrations
+- Background music (optional)
+
+## 🔒 Security
+
+- Secure token storage with Expo Secure Store
+- API request authentication
+- Input validation and sanitization
+- Secure image handling
+
+## 🚀 Performance Optimization
+
+- Lazy loading of screens
+- Image optimization
+- Efficient list rendering with FlatList
+- Memory management for large datasets
+
+## 🐛 Debugging
+
+### Common Issues
+
+1. **Metro bundler issues**: Clear cache with `expo start -c`
+2. **iOS build issues**: Ensure Xcode is properly configured
+3. **Android build issues**: Check Android SDK setup
+4. **Network issues**: Verify backend URL and CORS settings
+
+### Debugging Tools
+
+- Expo Developer Tools
+- React Native Debugger
+- Flipper (for advanced debugging)
+
+## 📈 Analytics & Monitoring
+
+Consider integrating:
+
+- Expo Analytics
+- Sentry for error tracking
+- Firebase Analytics
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+## 📄 License
+
+This project is licensed under the MIT License.
+
+## 📞 Support
+
+For support and questions:
+
+- Create an issue in the repository
+- Contact the development team
+- Check the documentation
+
+---
+
+**Note**: This React Native app maintains all the functionality of the original ReactJS web application while providing a native mobile experience with enhanced performance and mobile-specific features.

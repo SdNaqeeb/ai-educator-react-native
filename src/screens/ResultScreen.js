@@ -15,7 +15,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import axiosInstance from "../api/axiosInstance";
-import MarkdownWithMath from "../components/MarkdownWithMath";
+
 import MathRichText from "../components/MathRichText";
 
 const { width } = Dimensions.get("window");
@@ -328,7 +328,7 @@ const ResultScreen = () => {
               <View key={index} style={styles.stepContainer}>
                 <Text style={styles.stepTitle}>Step {stepNumber}:</Text>
                 <Text style={styles.stepContent}> {""}</Text>
-                <MathRichText content={stepContent} />
+                <MathRichText style={styles.stepContent} content={stepContent} />
               </View>
             );
           } else {

@@ -44,7 +44,7 @@ const storage = {
 };
 
 // ---------- CONFIG ----------
-const getBaseURL = () => "http://192.168.20.125:8000/";
+const getBaseURL = () => "https://autogenapp.aieducator.com";
 function getCSRFToken() {
   if (Platform.OS !== "web") return null;
   const match = document.cookie.match(new RegExp("(^| )csrftoken=([^;]+)"));

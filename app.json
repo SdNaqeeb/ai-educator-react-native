@@ -15,7 +15,10 @@
       "fallbackToCacheTimeout": 0
     },
     "assetBundlePatterns": [
-      "**/*"
+     
+        "assets/images/**/*",
+        "assets/sounds/**/*"
+     
     ],
     "ios": {
       "supportsTablet": true,
@@ -41,6 +44,9 @@
       "eas": {
         "projectId": "2180cf55-cf82-4972-abfa-328850bad51c"
       }
-    }
+    },
+    "plugins": [
+      "expo-router"
+    ]
   }
 }

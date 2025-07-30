@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import {
   View,
   Text,
@@ -7,8 +7,29 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import axiosInstance from "../api/axiosInstance";
+
+
+
 
 const RecentSessions = () => {
+
+//   const [recent, setRecent]=useState("")
+
+//   useEffect(async()=>{
+//     const response =await axiosInstance.get('/recentSessions')
+//     console.log(response.data)
+//     setRecent(response.data.items)
+//   },[])
+// {if (recent.item.isArray()){
+//   recent.item.map((each)=>{each.list})
+// }}
+//   recent.map((item)=>{
+//     <View>{item}</View>
+//   })
+
+
+  
   // Mock data - replace with actual data from API
   const recentSessions = [
     {

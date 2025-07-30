@@ -271,17 +271,17 @@ const LoginScreen = () => {
             </TouchableOpacity>
 
             {/* Form Footer */}
-            <View style={styles.formFooter}>
+            {/* <View style={styles.formFooter}>
               <TouchableOpacity style={styles.linkButton}>
                 <Text style={styles.linkText}>Reset Password</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.linkButton}>
                 <Text style={styles.linkText}>Support</Text>
               </TouchableOpacity>
-            </View>
+            </View> */}
 
             {/* Signup Link */}
-            <TouchableOpacity
+            {/* <TouchableOpacity
               style={styles.signupLinkContainer}
               onPress={navigateToSignup}
             >
@@ -289,7 +289,7 @@ const LoginScreen = () => {
                 Don't have an account?{" "}
                 <Text style={styles.signupLink}>Sign Up</Text>
               </Text>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
           </Animated.View>
 
           {/* Copyright */}
@@ -316,7 +316,7 @@ const styles = StyleSheet.create({
   },
   backgroundCircle: {
     position: "absolute",
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    backgroundColor: "rgba(255, 255, 255, 0.6)",
     borderRadius: 50,
   },
   logoSection: {
