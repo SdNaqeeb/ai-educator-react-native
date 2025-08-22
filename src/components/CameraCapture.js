@@ -11,6 +11,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import Modal from "react-native-modal";
 import * as ImagePicker from "expo-image-picker";
+import * as ImageManipulator from 'expo-image-manipulator';
 
 const CameraCapture = ({ visible, onCapture, onClose }) => {
   const [isLoading, setIsLoading] = useState(false);
@@ -77,12 +78,18 @@ const CameraCapture = ({ visible, onCapture, onClose }) => {
       const result = await ImagePicker.launchCameraAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
-        aspect: [4, 3],
-        quality: 0.8,
+    
+        quality: 1, // get the best quality from camera
       });
 
       if (!result.canceled && result.assets[0]) {
-        onCapture(result.assets[0].uri);
+        // Resize and compress before sending
+        const manipResult = await ImageManipulator.manipulateAsync(
+          result.assets[0].uri,
+          [{ resize: { width: 1200 } }], // 1200px width for good quality
+          { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG }
+        );
+        onCapture(manipResult.uri);
       }
     } catch (error) {
       console.error("Error taking picture:", error);
@@ -188,12 +195,18 @@ const CameraCapture = ({ visible, onCapture, onClose }) => {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
-        aspect: [4, 3],
-        quality: 0.8,
+     
+        quality: 1, // get the best quality from gallery
       });
 
       if (!result.canceled && result.assets[0]) {
-        onCapture(result.assets[0].uri);
+        // Resize and compress before sending
+        const manipResult = await ImageManipulator.manipulateAsync(
+          result.assets[0].uri,
+          [{ resize: { width: 1200 } }], // 1200px width for good quality
+          { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG }
+        );
+        onCapture(manipResult.uri);
       }
     } catch (error) {
       console.error("Error picking image:", error);
@@ -413,9 +426,14 @@ const styles = StyleSheet.create({
     backgroundColor: "#667eea",
   },
   galleryButton: {
+  
+    justifyContent: "center", 
     backgroundColor: "#10b981",
+   
+
   },
   buttonText: {
+    textAlign: "center",
     color: "#ffffff",
     fontSize: 16,
     fontWeight: "600",

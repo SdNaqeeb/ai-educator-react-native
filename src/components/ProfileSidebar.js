@@ -92,7 +92,7 @@ const ProfileSidebar = ({ visible, onClose }) => {
     >
       <View style={styles.sidebar}>
         {/* Header */}
-        <LinearGradient colors={["#667eea", "#764ba2"]} style={styles.header}>
+        <LinearGradient  colors={['#3B82F6', '#8B5CF6']}  style={styles.header}>
           <TouchableOpacity style={styles.closeButton} onPress={onClose}>
             <Ionicons name="close" size={24} color="#ffffff" />
           </TouchableOpacity>
@@ -132,7 +132,7 @@ const ProfileSidebar = ({ visible, onClose }) => {
         <View style={styles.logoutContainer}>
           <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
             <LinearGradient
-              colors={["#ef4444", "#dc2626"]}
+             colors={['#3B82F6', '#8B5CF6']} 
               style={styles.logoutButtonGradient}
             >
               <Ionicons name="log-out" size={20} color="#ffffff" />

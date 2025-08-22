@@ -31,12 +31,7 @@ const GreetingHeader = ({ username }) => {
       <View style={styles.greetingContent}>
         <View style={styles.greetingText}>
           <Text style={styles.greetingTitle}>
-            <Ionicons
-              name="school"
-              size={24}
-              color="#ffffff"
-              style={styles.icon}
-            />
+            
             {getTimeBasedGreeting()}, {username}!
             <Text style={styles.emoji}> 🎓</Text>
           </Text>
@@ -129,7 +124,7 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
   },
   currentDate: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "600",
     color: "#ffffff",
     textAlign: "right",

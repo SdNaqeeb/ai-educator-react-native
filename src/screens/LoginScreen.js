@@ -15,7 +15,6 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useNavigation } from "@react-navigation/native";
-
 import { AuthContext } from "../contexts/AuthContext";
 import axiosInstance from "../api/axiosInstance";
 
@@ -32,12 +31,16 @@ const LoginScreen = () => {
   // Animation values
   const logoAnimation = useRef(new Animated.Value(0)).current;
   const formAnimation = useRef(new Animated.Value(0)).current;
-  const circleAnimations = useRef(
-    Array.from({ length: 6 }, () => new Animated.Value(0)),
+  const backgroundElements = useRef(
+    Array.from({ length: 4 }, () => ({
+      translateY: new Animated.Value(0),
+      opacity: new Animated.Value(0.3),
+    }))
   ).current;
+  const logoScale = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    // Start animations when component mounts
+    // Start main animations with smoother timing
     Animated.parallel([
       Animated.timing(logoAnimation, {
         toValue: 1,
@@ -46,28 +49,60 @@ const LoginScreen = () => {
       }),
       Animated.timing(formAnimation, {
         toValue: 1,
-        duration: 1200,
+        duration: 800,
         delay: 300,
         useNativeDriver: true,
       }),
-      // Animate background circles
-      ...circleAnimations.map((animation, index) =>
-        Animated.loop(
-          Animated.sequence([
-            Animated.timing(animation, {
-              toValue: 1,
-              duration: 3000 + index * 500,
-              useNativeDriver: true,
-            }),
-            Animated.timing(animation, {
-              toValue: 0,
-              duration: 3000 + index * 500,
-              useNativeDriver: true,
-            }),
-          ]),
-        ),
-      ),
     ]).start();
+
+    // Subtle background elements animation
+    backgroundElements.forEach((element, index) => {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(element.translateY, {
+            toValue: -15,
+            duration: 3000 + (index * 500),
+            useNativeDriver: true,
+          }),
+          Animated.timing(element.translateY, {
+            toValue: 15,
+            duration: 3000 + (index * 500),
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(element.opacity, {
+            toValue: 0.6,
+            duration: 2000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(element.opacity, {
+            toValue: 0.2,
+            duration: 2000,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+    });
+
+    // Subtle logo breathing animation
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(logoScale, {
+          toValue: 1.02,
+          duration: 3000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(logoScale, {
+          toValue: 1,
+          duration: 3000,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
   }, []);
 
   const handleLogin = async () => {
@@ -75,18 +110,18 @@ const LoginScreen = () => {
       Alert.alert("Error", "Please enter both username and password");
       return;
     }
-  
+
     setIsLoading(true);
-  
+
     try {
-      await axiosInstance.initializeCSRF(); // ✅ ensure token before login
+      await axiosInstance.initializeCSRF();
       const response = await axiosInstance.post("/login/", {
         username: username.trim(),
         password: password.trim(),
       });
-  
+
       const { token, role, class_name, csrf_token } = response.data;
-  
+
       if (token && csrf_token) {
         await login(username.trim(), token, role || "student", class_name || "", csrf_token);
         console.log("✅ Login complete");
@@ -100,40 +135,29 @@ const LoginScreen = () => {
       setIsLoading(false);
     }
   };
-  
 
   const navigateToSignup = () => {
     navigation.navigate("Signup");
   };
 
-  const renderBackgroundCircle = (index) => {
-    const animation = circleAnimations[index];
-    const size = 60 + index * 20;
-    const left = (index * 60) % width;
-    const top = (index * 80) % (height * 0.6);
+  const renderBackgroundElement = (index) => {
+    const element = backgroundElements[index];
+    const positions = [
+      { left: width * 0.1, top: height * 0.2 },
+      { right: width * 0.15, top: height * 0.3 },
+      { left: width * 0.05, top: height * 0.6 },
+      { right: width * 0.1, top: height * 0.7 },
+    ];
 
     return (
       <Animated.View
         key={index}
         style={[
-          styles.backgroundCircle,
+          styles.backgroundElement,
+          positions[index],
           {
-            width: size,
-            height: size,
-            left,
-            top,
-            opacity: animation.interpolate({
-              inputRange: [0, 0.5, 1],
-              outputRange: [0.1, 0.3, 0.1],
-            }),
-            transform: [
-              {
-                scale: animation.interpolate({
-                  inputRange: [0, 0.5, 1],
-                  outputRange: [0.8, 1.2, 0.8],
-                }),
-              },
-            ],
+            opacity: element.opacity,
+            transform: [{ translateY: element.translateY }],
           },
         ]}
       />
@@ -141,7 +165,11 @@ const LoginScreen = () => {
   };
 
   return (
-    <LinearGradient colors={["#667eea", "#764ba2"]} style={styles.container}>
+    <LinearGradient 
+      colors={['#3B82F6', '#8B5CF6']} 
+      locations={[0, 0.5, 1]}
+      style={styles.container}
+    >
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.keyboardAvoidingView}
@@ -151,8 +179,15 @@ const LoginScreen = () => {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Background Circles */}
-          {circleAnimations.map((_, index) => renderBackgroundCircle(index))}
+          {/* Subtle Background Elements */}
+          {backgroundElements.map((_, index) => renderBackgroundElement(index))}
+
+          {/* Decorative Background */}
+          <View style={styles.backgroundDecoration}>
+            <View style={[styles.decorativeCircle, styles.circle1]} />
+            <View style={[styles.decorativeCircle, styles.circle2]} />
+            <View style={[styles.decorativeCircle, styles.circle3]} />
+          </View>
 
           {/* Logo Section */}
           <Animated.View
@@ -164,27 +199,42 @@ const LoginScreen = () => {
                   {
                     translateY: logoAnimation.interpolate({
                       inputRange: [0, 1],
-                      outputRange: [-50, 0],
+                      outputRange: [-30, 0],
                     }),
                   },
+                  { scale: logoScale },
                 ],
               },
             ]}
           >
             <View style={styles.logoContainer}>
-              <Text style={styles.logoText}>AI EDUCATOR</Text>
-              <Text style={styles.logoSubText}>Smart Learning Platform</Text>
+              <View style={styles.logoIconContainer}>
+                <LinearGradient
+                  colors={['#60A5FA', '#A78BFA']}
+                  style={styles.logoIconGradient}
+                >
+                  <Ionicons name="school-outline" size={36} color="#FFFFFF" />
+                </LinearGradient>
+              </View>
+              <Text style={styles.logoText}>SMART LEARNERS</Text>
+              <Text style={styles.logoSubText}>Intelligent Learning Platform</Text>
             </View>
 
             <View style={styles.portalSection}>
               <View style={styles.portalIcons}>
-                <Ionicons name="school" size={24} color="#ffffff" />
-                <Ionicons name="book" size={24} color="#ffffff" />
-                <Ionicons name="person" size={24} color="#ffffff" />
+                <View style={styles.portalIcon}>
+                  <Ionicons name="book-outline" size={18} color="#FFFFFF" />
+                </View>
+                <View style={styles.portalIcon}>
+                  <Ionicons name="bulb-outline" size={18} color="#FFFFFF" />
+                </View>
+                <View style={styles.portalIcon}>
+                  <Ionicons name="trending-up-outline" size={18} color="#FFFFFF" />
+                </View>
               </View>
               <Text style={styles.portalTitle}>Student Portal</Text>
               <Text style={styles.portalDescription}>
-                Access your AI-powered learning experience
+                Access your personalized learning dashboard
               </Text>
             </View>
           </Animated.View>
@@ -199,22 +249,27 @@ const LoginScreen = () => {
                   {
                     translateY: formAnimation.interpolate({
                       inputRange: [0, 1],
-                      outputRange: [50, 0],
+                      outputRange: [30, 0],
                     }),
                   },
                 ],
               },
             ]}
           >
+            {/* <View style={styles.formHeader}>
+              <Text style={styles.formTitle}>Welcome Back</Text>
+              <Text style={styles.formSubtitle}>Sign in to continue your learning journey</Text>
+            </View> */}
+
             {/* Username Input */}
             <View style={styles.inputContainer}>
               <View style={styles.inputIconContainer}>
-                <Ionicons name="mail" size={20} color="#667eea" />
+                <Ionicons name="mail-outline" size={20} color="#6366F1" />
               </View>
               <TextInput
                 style={styles.textInput}
-                placeholder="Student Email"
-                placeholderTextColor="#94a3b8"
+                placeholder="User ID"
+                placeholderTextColor="#94A3B8"
                 value={username}
                 onChangeText={setUsername}
                 autoCapitalize="none"
@@ -226,12 +281,12 @@ const LoginScreen = () => {
             {/* Password Input */}
             <View style={styles.inputContainer}>
               <View style={styles.inputIconContainer}>
-                <Ionicons name="lock-closed" size={20} color="#667eea" />
+                <Ionicons name="lock-closed-outline" size={20} color="#6366F1" />
               </View>
               <TextInput
                 style={styles.textInput}
                 placeholder="Password"
-                placeholderTextColor="#94a3b8"
+                placeholderTextColor="#94A3B8"
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
@@ -242,9 +297,9 @@ const LoginScreen = () => {
                 onPress={() => setShowPassword(!showPassword)}
               >
                 <Ionicons
-                  name={showPassword ? "eye" : "eye-off"}
+                  name={showPassword ? "eye-outline" : "eye-off-outline"}
                   size={20}
-                  color="#667eea"
+                  color="#6366F1"
                 />
               </TouchableOpacity>
             </View>
@@ -257,44 +312,30 @@ const LoginScreen = () => {
               ]}
               onPress={handleLogin}
               disabled={isLoading}
+              activeOpacity={0.9}
             >
               <LinearGradient
-                colors={["#667eea", "#764ba2"]}
+                colors={['#3B82F6', '#6366F1', '#8B5CF6']}
+                locations={[0, 0.5, 1]}
                 style={styles.loginButtonGradient}
               >
-                {isLoading ? (
-                  <Text style={styles.loginButtonText}>Signing In...</Text>
-                ) : (
-                  <Text style={styles.loginButtonText}>Start Learning</Text>
-                )}
+                <Text style={styles.loginButtonText}>
+                  {isLoading ? "Signing In..." : "Start Learning"}
+                </Text>
               </LinearGradient>
             </TouchableOpacity>
 
-            {/* Form Footer */}
+            {/* Additional Options */}
             {/* <View style={styles.formFooter}>
               <TouchableOpacity style={styles.linkButton}>
-                <Text style={styles.linkText}>Reset Password</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.linkButton}>
-                <Text style={styles.linkText}>Support</Text>
+                <Text style={styles.linkText}>Forgot Password?</Text>
               </TouchableOpacity>
             </View> */}
-
-            {/* Signup Link */}
-            {/* <TouchableOpacity
-              style={styles.signupLinkContainer}
-              onPress={navigateToSignup}
-            >
-              <Text style={styles.signupText}>
-                Don't have an account?{" "}
-                <Text style={styles.signupLink}>Sign Up</Text>
-              </Text>
-            </TouchableOpacity> */}
           </Animated.View>
 
           {/* Copyright */}
           <Text style={styles.copyright}>
-            © 2025 AI EDUCATOR. All rights reserved.
+            © 2025 AI Educator. All rights reserved.
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -314,78 +355,156 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 40,
   },
-  backgroundCircle: {
-    position: "absolute",
-    backgroundColor: "rgba(255, 255, 255, 0.6)",
-    borderRadius: 50,
+  backgroundDecoration: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  decorativeCircle: {
+    position: 'absolute',
+    borderRadius: 1000,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  circle1: {
+    width: 300,
+    height: 300,
+    top: -150,
+    right: -150,
+  },
+  circle2: {
+    width: 200,
+    height: 200,
+    bottom: 50,
+    left: -100,
+  },
+  circle3: {
+    width: 120,
+    height: 120,
+    top: height * 0.4,
+    right: -60,
+  },
+  backgroundElement: {
+    position: 'absolute',
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.4)',
   },
   logoSection: {
-    alignItems: "center",
+    alignItems: 'center',
     marginTop: 60,
-    marginBottom: 40,
+    marginBottom: 50,
   },
   logoContainer: {
-    alignItems: "center",
-    marginBottom: 30,
+    alignItems: 'center',
+    marginBottom: 40,
+  },
+  logoIconContainer: {
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  logoIconGradient: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   logoText: {
-    fontSize: 36,
-    fontWeight: "bold",
-    color: "#ffffff",
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#FFFFFF',
     letterSpacing: 2,
-    textShadowColor: "rgba(0, 0, 0, 0.3)",
-    textShadowOffset: { width: 2, height: 2 },
+    textShadowColor: 'rgba(0, 0, 0, 0.2)',
+    textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 4,
+    
   },
   logoSubText: {
     fontSize: 16,
-    color: "rgba(255, 255, 255, 0.8)",
-    marginTop: 5,
-    fontWeight: "500",
+    color: 'rgba(255, 255, 255, 0.85)',
+    marginTop: 8,
+    fontWeight: '500',
+    letterSpacing: 0.5,
+   
   },
   portalSection: {
-    alignItems: "center",
+    alignItems: 'center',
   },
   portalIcons: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    width: 120,
-    marginBottom: 15,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginBottom: 20,
+    gap: 20,
+  },
+  portalIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   portalTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#ffffff",
+    fontSize: 22,
+    fontWeight: '600',
+    color: '#FFFFFF',
     marginBottom: 8,
+  
   },
   portalDescription: {
-    fontSize: 14,
-    color: "rgba(255, 255, 255, 0.8)",
-    textAlign: "center",
-    paddingHorizontal: 20,
+    fontSize: 15,
+    color: 'rgba(255, 255, 255, 0.8)',
+    textAlign: 'center',
+    paddingHorizontal: 30,
+    lineHeight: 20,
+   
   },
   formContainer: {
-    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    backgroundColor: '#FFFFFF',
     borderRadius: 20,
-    padding: 24,
-    marginBottom: 20,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 10,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 10,
+    padding: 32,
+    marginBottom: 30,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  formHeader: {
+    alignItems: 'center',
+    marginBottom: 32,
+  },
+  formTitle: {
+    fontSize: 24,
+    fontWeight: '600',
+    color: '#1E293B',
+    marginBottom: 8,
+ 
+  },
+  formSubtitle: {
+    fontSize: 15,
+    color: '#64748B',
+    textAlign: 'center',
+ 
   },
   inputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#f8fafc",
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
     borderRadius: 12,
-    marginBottom: 16,
-    borderWidth: 2,
-    borderColor: "#e2e8f0",
+    marginBottom: 20,
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    paddingHorizontal: 4,
   },
   inputIconContainer: {
     paddingLeft: 16,
@@ -395,71 +514,59 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 56,
     fontSize: 16,
-    color: "#2d3748",
-    fontWeight: "500",
+    color: '#1E293B',
+    fontWeight: '500',
+  
   },
   passwordToggle: {
     paddingRight: 16,
     paddingLeft: 12,
+    paddingVertical: 8,
   },
   loginButton: {
     borderRadius: 12,
     marginTop: 8,
-    marginBottom: 20,
-    shadowColor: "#667eea",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
+    marginBottom: 24,
+    shadowColor: '#3B82F6',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
     shadowRadius: 8,
-    elevation: 5,
+    elevation: 4,
   },
   loginButtonDisabled: {
     opacity: 0.7,
   },
   loginButtonGradient: {
     height: 56,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
     borderRadius: 12,
   },
   loginButtonText: {
-    color: "#ffffff",
-    fontSize: 18,
-    fontWeight: "bold",
-    letterSpacing: 1,
+    color: '#FFFFFF',
+    fontSize: 17,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+   
   },
   formFooter: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 20,
+    alignItems: 'center',
   },
   linkButton: {
     paddingVertical: 8,
   },
   linkText: {
-    color: "#667eea",
+    color: '#6366F1',
     fontSize: 14,
-    fontWeight: "600",
-  },
-  signupLinkContainer: {
-    alignItems: "center",
-    paddingVertical: 12,
-  },
-  signupText: {
-    fontSize: 14,
-    color: "#6b7280",
-  },
-  signupLink: {
-    color: "#667eea",
-    fontWeight: "bold",
+    fontWeight: '500',
+
   },
   copyright: {
-    textAlign: "center",
-    color: "rgba(255, 255, 255, 0.7)",
+    textAlign: 'center',
+    color: 'rgba(255, 255, 255, 0.7)',
     fontSize: 12,
     marginTop: 20,
+ 
   },
 });
 

@@ -8,7 +8,6 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-
 import CustomPicker from "./CustomPicker";
 import MultiSelectPicker from "./MultiSelectPicker";
 
@@ -35,15 +34,15 @@ const QuestionGeneratorForm = ({
   loading,
 }) => {
   const questionTypes = [
-    { value: "solved", label: "📚 Solved Examples" },
-    { value: "exercise", label: "💪 Practice Exercises" },
-    { value: "external", label: "🎯 Set of Questions" },
-    { value: "worksheets", label: "📄 Worksheets" },
+    { value: "solved", label: "Solved Examples" },
+    { value: "exercise", label: "Practice Exercises" },
+    { value: "external", label: "Question Sets" },
+    { value: "worksheets", label: "Worksheets" },
   ];
 
   const subTopicOptions = subTopics.map((subTopic, index) => ({
     value: subTopic,
-    label: `Exercise ${index + 1}`,
+    label: `Set ${index + 1}`,
   }));
 
   const worksheetOptions = worksheets.map((worksheet) => ({
@@ -54,21 +53,23 @@ const QuestionGeneratorForm = ({
   return (
     <View style={styles.container}>
       <View style={styles.sectionHeader}>
-        <Ionicons name="rocket" size={24} color="#667eea" />
-        <Text style={styles.sectionTitle}>
-          🚀 Start Your Learning Adventure
-        </Text>
+        <LinearGradient
+          colors={['#3B82F6', '#6366F1']}
+          style={styles.iconContainer}
+        >
+          <Ionicons name="library-outline" size={20} color="#ffffff" />
+        </LinearGradient>
+        <Text style={styles.sectionTitle}>Question Generator</Text>
       </View>
       <Text style={styles.sectionDescription}>
-        Select your preferences and let's begin this exciting mathematical
-        journey!
+        Configure your study session by selecting the appropriate options below
       </Text>
 
       <View style={styles.formContainer}>
         {/* Class Selection */}
         <View style={styles.inputGroup}>
           <Text style={styles.inputLabel}>
-            <Ionicons name="school" size={16} color="#667eea" /> Class
+            <Ionicons name="school-outline" size={16} color="#6366F1" /> Class
           </Text>
           <CustomPicker
             selectedValue={selectedClass}
@@ -84,7 +85,7 @@ const QuestionGeneratorForm = ({
         {/* Subject Selection */}
         <View style={styles.inputGroup}>
           <Text style={styles.inputLabel}>
-            <Ionicons name="book" size={16} color="#667eea" /> Subject
+            <Ionicons name="book-outline" size={16} color="#6366F1" /> Subject
           </Text>
           <CustomPicker
             selectedValue={selectedSubject}
@@ -101,8 +102,10 @@ const QuestionGeneratorForm = ({
         {/* Chapters Selection */}
         <View style={styles.inputGroup}>
           <Text style={styles.inputLabel}>
-            <Ionicons name="list" size={16} color="#667eea" /> Chapters (Select
-            Multiple) - {chapters.length} Available
+            <Ionicons name="list-outline" size={16} color="#6366F1" /> Chapters
+            {chapters.length > 0 && (
+              <Text style={styles.availableCount}> ({chapters.length} available)</Text>
+            )}
           </Text>
           <MultiSelectPicker
             selectedValues={selectedChapters}
@@ -114,7 +117,6 @@ const QuestionGeneratorForm = ({
             placeholder="Select chapters..."
             disabled={!selectedSubject || chapters.length === 0}
           />
-
           <View style={styles.actionButtons}>
             <TouchableOpacity
               style={[styles.actionButton, styles.selectAllButton]}
@@ -142,8 +144,7 @@ const QuestionGeneratorForm = ({
         {/* Question Type Selection */}
         <View style={styles.inputGroup}>
           <Text style={styles.inputLabel}>
-            <Ionicons name="help-circle" size={16} color="#667eea" /> Question
-            Type
+            <Ionicons name="help-circle-outline" size={16} color="#6366F1" /> Question Type
           </Text>
           <CustomPicker
             selectedValue={questionType}
@@ -158,14 +159,13 @@ const QuestionGeneratorForm = ({
         {questionType === "external" && (
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>
-              <Ionicons name="bookmark" size={16} color="#667eea" /> Select The
-              Set
+              <Ionicons name="bookmark-outline" size={16} color="#6366F1" /> Select Question Set
             </Text>
             <CustomPicker
               selectedValue={questionLevel}
               onValueChange={setQuestionLevel}
               items={subTopicOptions}
-              placeholder="Select The Set"
+              placeholder="Select Question Set"
             />
           </View>
         )}
@@ -174,8 +174,7 @@ const QuestionGeneratorForm = ({
         {questionType === "worksheets" && (
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>
-              <Ionicons name="document" size={16} color="#667eea" /> Select
-              Worksheet
+              <Ionicons name="document-outline" size={16} color="#6366F1" /> Select Worksheet
             </Text>
             <CustomPicker
               selectedValue={selectedWorksheet}
@@ -194,13 +193,14 @@ const QuestionGeneratorForm = ({
           ]}
           onPress={onGenerate}
           disabled={!isEnabled || loading}
+          activeOpacity={0.9}
         >
           <LinearGradient
-            colors={isEnabled ? ["#667eea", "#764ba2"] : ["#94a3b8", "#94a3b8"]}
+            colors={isEnabled ? ["#3B82F6", "#6366F1", "#8B5CF6"] : ["#94A3B8", "#94A3B8"]}
             style={styles.generateButtonGradient}
           >
             <Ionicons
-              name={loading ? "hourglass" : "rocket"}
+              name={loading ? "hourglass-outline" : "play-circle-outline"}
               size={20}
               color="#ffffff"
               style={styles.buttonIcon}
@@ -219,83 +219,96 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: "#ffffff",
     borderRadius: 16,
-    margin: 16,
-    padding: 20,
+    padding: 24,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 4,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.05)',
   },
   sectionHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 8,
+    marginBottom: 12,
+  },
+  iconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
   },
   sectionTitle: {
     fontSize: 20,
-    fontWeight: "bold",
-    color: "#1a202c",
-    marginLeft: 8,
+    fontWeight: "600",
+    color: "#1E293B",
   },
   sectionDescription: {
     fontSize: 14,
-    color: "#64748b",
-    marginBottom: 20,
+    color: "#64748B",
+    marginBottom: 24,
     lineHeight: 20,
   },
   formContainer: {
-    gap: 16,
+    gap: 20,
   },
   inputGroup: {
     marginBottom: 4,
   },
   inputLabel: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "600",
     color: "#374151",
     marginBottom: 8,
     flexDirection: "row",
     alignItems: "center",
   },
+  availableCount: {
+    fontSize: 13,
+    fontWeight: "400",
+    color: "#6B7280",
+  },
   actionButtons: {
     flexDirection: "row",
-    marginTop: 8,
-    gap: 8,
+    marginTop: 12,
+    gap: 12,
   },
   actionButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
     borderWidth: 1,
   },
   selectAllButton: {
-    borderColor: "#667eea",
-    backgroundColor: "rgba(102, 126, 234, 0.1)",
+    borderColor: "#3B82F6",
+    backgroundColor: "rgba(59, 130, 246, 0.1)",
   },
   clearButton: {
-    borderColor: "#6b7280",
+    borderColor: "#6B7280",
     backgroundColor: "rgba(107, 114, 128, 0.1)",
   },
   actionButtonText: {
-    fontSize: 12,
-    fontWeight: "600",
+    fontSize: 13,
+    fontWeight: "500",
     color: "#374151",
   },
   generateButton: {
     borderRadius: 12,
-    marginTop: 16,
-    shadowColor: "#667eea",
+    marginTop: 8,
+    shadowColor: "#3B82F6",
     shadowOffset: {
       width: 0,
       height: 4,
     },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.2,
     shadowRadius: 8,
-    elevation: 5,
+    elevation: 4,
   },
   generateButtonDisabled: {
     shadowOpacity: 0,
@@ -314,7 +327,7 @@ const styles = StyleSheet.create({
   generateButtonText: {
     color: "#ffffff",
     fontSize: 16,
-    fontWeight: "bold",
+    fontWeight: "600",
     letterSpacing: 0.5,
   },
 });
