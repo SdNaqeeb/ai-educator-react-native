@@ -78,11 +78,11 @@ export const AuthProvider = ({ children }) => {
   const login = async (usernameParam, token, role = "student", userClassName = "", csrf) => {
     try {
       console.log("🔐 Starting login process...");
-      await storage.setItem("token", token);
-      await storage.setItem("username", usernameParam);
-      await storage.setItem("role", role);
-      await storage.setItem("className", userClassName);
-      await storage.setItem("csrfToken", csrf);
+      if (token != null) await storage.setItem("token", String(token));
+      if (usernameParam != null) await storage.setItem("username", String(usernameParam));
+      if (role != null) await storage.setItem("role", String(role));
+      if (userClassName != null) await storage.setItem("className", String(userClassName));
+      if (csrf != null) await storage.setItem("csrfToken", String(csrf));
 
       setUser(token);
       setUsername(usernameParam);

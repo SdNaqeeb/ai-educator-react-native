@@ -12,9 +12,15 @@ import Modal from "react-native-modal";
 import { LinearGradient } from "expo-linear-gradient";
 
 import { AuthContext } from "../contexts/AuthContext";
+import { NotificationContext } from "../contexts/NotificationContext";
+import NotificationDropdown from "./NotificationDropdown";
 
 const ProfileSidebar = ({ visible, onClose }) => {
   const { username, role, logout } = useContext(AuthContext);
+  const { getUnreadCount } = useContext(NotificationContext);
+  const [showNotifications, setShowNotifications] = useState(false);
+
+  const unreadCount = getUnreadCount();
 
   const handleLogout = () => {
     Alert.alert("Logout", "Are you sure you want to logout?", [
@@ -39,6 +45,15 @@ const ProfileSidebar = ({ visible, onClose }) => {
   };
 
   const menuItems = [
+    {
+      icon: "notifications",
+      title: "Notifications",
+      subtitle: `You have ${unreadCount} unread notifications`,
+      onPress: () => {
+        setShowNotifications(true);
+      },
+      badge: unreadCount > 0 ? unreadCount : null,
+    },
     {
       icon: "person",
       title: "Profile",
@@ -80,68 +95,83 @@ const ProfileSidebar = ({ visible, onClose }) => {
   ];
 
   return (
-    <Modal
-      isVisible={visible}
-      style={styles.modal}
-      backdropOpacity={0.5}
-      onBackdropPress={onClose}
-      animationIn="slideInRight"
-      animationOut="slideOutRight"
-      useNativeDriverForBackdrop={false}
-      hideModalContentWhileAnimating={true}
-    >
-      <View style={styles.sidebar}>
-        {/* Header */}
-        <LinearGradient  colors={['#3B82F6', '#8B5CF6']}  style={styles.header}>
-          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-            <Ionicons name="close" size={24} color="#ffffff" />
-          </TouchableOpacity>
-
-          <View style={styles.profileSection}>
-            <View style={styles.avatar}>
-              <Ionicons name="person" size={32} color="#ffffff" />
-            </View>
-            <Text style={styles.username}>{username}</Text>
-            <Text style={styles.role}>
-              {role?.charAt(0).toUpperCase() + role?.slice(1)}
-            </Text>
-          </View>
-        </LinearGradient>
-
-        {/* Menu Items */}
-        <View style={styles.menuContainer}>
-          {menuItems.map((item, index) => (
-            <TouchableOpacity
-              key={index}
-              style={styles.menuItem}
-              onPress={item.onPress}
-            >
-              <View style={styles.menuItemIcon}>
-                <Ionicons name={item.icon} size={24} color="#667eea" />
-              </View>
-              <View style={styles.menuItemContent}>
-                <Text style={styles.menuItemTitle}>{item.title}</Text>
-                <Text style={styles.menuItemSubtitle}>{item.subtitle}</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color="#94a3b8" />
+    <>
+      <Modal
+        isVisible={visible}
+        style={styles.modal}
+        backdropOpacity={0.5}
+        onBackdropPress={onClose}
+        animationIn="slideInRight"
+        animationOut="slideOutRight"
+        useNativeDriverForBackdrop={false}
+        hideModalContentWhileAnimating={true}
+      >
+        <View style={styles.sidebar}>
+          {/* Header */}
+          <LinearGradient  colors={['#3B82F6', '#8B5CF6']}  style={styles.header}>
+            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+              <Ionicons name="close" size={24} color="#ffffff" />
             </TouchableOpacity>
-          ))}
-        </View>
 
-        {/* Logout Button */}
-        <View style={styles.logoutContainer}>
-          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-            <LinearGradient
-             colors={['#3B82F6', '#8B5CF6']} 
-              style={styles.logoutButtonGradient}
-            >
-              <Ionicons name="log-out" size={20} color="#ffffff" />
-              <Text style={styles.logoutButtonText}>Logout</Text>
-            </LinearGradient>
-          </TouchableOpacity>
+            <View style={styles.profileSection}>
+              <View style={styles.avatar}>
+                <Ionicons name="person" size={32} color="#ffffff" />
+              </View>
+              <Text style={styles.username}>{username}</Text>
+              <Text style={styles.role}>
+                {role?.charAt(0).toUpperCase() + role?.slice(1)}
+              </Text>
+            </View>
+          </LinearGradient>
+
+          {/* Menu Items */}
+          <View style={styles.menuContainer}>
+            {menuItems.map((item, index) => (
+              <TouchableOpacity
+                key={index}
+                style={styles.menuItem}
+                onPress={item.onPress}
+              >
+                <View style={styles.menuItemIcon}>
+                  <Ionicons name={item.icon} size={24} color="#667eea" />
+                  {item.badge && (
+                    <View style={styles.badge}>
+                      <Text style={styles.badgeText}>
+                        {item.badge > 99 ? '99+' : item.badge}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+                <View style={styles.menuItemContent}>
+                  <Text style={styles.menuItemTitle}>{item.title}</Text>
+                  <Text style={styles.menuItemSubtitle}>{item.subtitle}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color="#94a3b8" />
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Logout Button */}
+          <View style={styles.logoutContainer}>
+            <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+              <LinearGradient
+               colors={['#3B82F6', '#8B5CF6']} 
+                style={styles.logoutButtonGradient}
+              >
+                <Ionicons name="log-out" size={20} color="#ffffff" />
+                <Text style={styles.logoutButtonText}>Logout</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
-    </Modal>
+      </Modal>
+
+      {/* Notification Dropdown */}
+      <NotificationDropdown 
+        visible={showNotifications}
+        onClose={() => setShowNotifications(false)}
+      />
+    </>
   );
 };
 
@@ -216,6 +246,24 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginRight: 16,
+    position: "relative",
+  },
+  badge: {
+    position: "absolute",
+    top: -5,
+    right: -5,
+    backgroundColor: "#ef4444",
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 4,
+  },
+  badgeText: {
+    color: "#ffffff",
+    fontSize: 10,
+    fontWeight: "bold",
   },
   menuItemContent: {
     flex: 1,

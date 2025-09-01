@@ -23,7 +23,7 @@ import axiosInstance from "../api/axiosInstance";
 import GreetingHeader from "../components/GreetingHeader";
 import ProgressCard from "../components/ProgressCard";
 import QuestionGeneratorForm from "../components/QuestionGeneratorForm";
-import RecentSessions from "../components/RecentSessions";
+import UnifiedSessions from "../components/UnifiedSessions";
 import QuickActions from "../components/QuickActions";
 import ProfileSidebar from "../components/ProfileSidebar";
 
@@ -537,9 +537,9 @@ const StudentDashScreen = () => {
             />
           </View>
 
-          {/* Recent Sessions */}
+          {/* Learning Activity (Unified Sessions) */}
           <View style={styles.sessionsContainer}>
-            <RecentSessions />
+            <UnifiedSessions />
           </View>
       
       </Animated.View>

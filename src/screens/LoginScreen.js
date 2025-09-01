@@ -114,23 +114,19 @@ const LoginScreen = () => {
     setIsLoading(true);
 
     try {
-      await axiosInstance.initializeCSRF();
-      const response = await axiosInstance.post("/login/", {
-        username: username.trim(),
-        password: password.trim(),
-      });
+      const data = await axiosInstance.login(username.trim(), password.trim());
+      const { access, role, class_name } = data;
 
-      const { token, role, class_name, csrf_token } = response.data;
-
-      if (token && csrf_token) {
-        await login(username.trim(), token, role || "student", class_name || "", csrf_token);
+      if (access) {
+        await login(username.trim(), access, role || "student", class_name || "");
         console.log("✅ Login complete");
       } else {
-        Alert.alert("Error", "Login failed. Missing token or CSRF.");
+        Alert.alert("Error", "Login failed. Missing access token.");
       }
     } catch (error) {
       console.error("❌ Login error:", error);
-      Alert.alert("Login Failed", error.response?.data?.description || "Please try again.");
+      const message = error.message || error.response?.data?.detail || "Please try again.";
+      Alert.alert("Login Failed", message);
     } finally {
       setIsLoading(false);
     }

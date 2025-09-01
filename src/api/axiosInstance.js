@@ -3,13 +3,14 @@ import * as SecureStore from "expo-secure-store";
 import { Platform, Alert } from "react-native";
 
 // ---------- STORAGE ----------
+const TOKEN_KEY = "access_token";
+const REFRESH_TOKEN_KEY = "refresh_token";
+
 const storage = {
   async getItem(key) {
     try {
       if (Platform.OS === "web") return localStorage.getItem(key);
-      const value = await SecureStore.getItemAsync(key);
-      console.log(`Storage get ${key}:`, value ? "Found" : "Not found");
-      return value;
+      return await SecureStore.getItemAsync(key);
     } catch (error) {
       console.error(`Error getting ${key} from storage:`, error);
       return null;
@@ -21,7 +22,6 @@ const storage = {
         localStorage.setItem(key, value);
       } else {
         await SecureStore.setItemAsync(key, value);
-        console.log(`Storage set ${key}: Success`);
       }
     } catch (error) {
       console.error(`Error setting ${key} in storage:`, error);
@@ -44,134 +44,202 @@ const storage = {
 };
 
 // ---------- CONFIG ----------
-const getBaseURL = () => "https://autogenapp.aieducator.com";
-function getCSRFToken() {
-  if (Platform.OS !== "web") return null;
-  const match = document.cookie.match(new RegExp("(^| )csrftoken=([^;]+)"));
-  return match ? match[2] : null;
-}
-
-// ---------- TOKEN STATE ----------
-let inMemoryToken = null;
-let inMemoryCSRFToken = null;
-
 const axiosInstance = axios.create({
-  baseURL: getBaseURL(),
-  withCredentials: Platform.OS === "web",
-  headers: { "Content-Type": "application/json" },
+  baseURL: "https://autogen.aieducator.com/",
+  headers: {
+    "Content-Type": "application/json",
+  },
   timeout: 60000,
 });
 
-// ---------- GET TOKENS ----------
-const getAuthToken = async () => {
-  if (inMemoryToken) return inMemoryToken;
-  const token = await storage.getItem("token");
-  inMemoryToken = token;
-  return token;
+// ---------- TOKEN HELPERS ----------
+const getAccessToken = async () => {
+  return await storage.getItem(TOKEN_KEY);
+};
+const getRefreshToken = async () => {
+  return await storage.getItem(REFRESH_TOKEN_KEY);
+};
+const setTokens = async (access, refresh) => {
+  if (access) await storage.setItem(TOKEN_KEY, access);
+  if (refresh) await storage.setItem(REFRESH_TOKEN_KEY, refresh);
+  // Compatibility with existing context expecting "token"
+  if (access) await storage.setItem("token", access);
+};
+const clearTokens = async () => {
+  await storage.multiRemove([
+    TOKEN_KEY,
+    REFRESH_TOKEN_KEY,
+    "token",
+    "username",
+    "streakData",
+    "rewardData",
+    "completedChapters",
+    "userRole",
+    "userEmail",
+    "csrfToken",
+  ]);
 };
 
-const getCSRFTokenForRequest = async () => {
-  if (Platform.OS === "web") return getCSRFToken();
-  if (inMemoryCSRFToken) return inMemoryCSRFToken;
-  const token = await storage.getItem("csrfToken");
-  console.log("getting csrf", token);
-  inMemoryCSRFToken = token;
-  return token;
-};
+// ---------- REFRESH QUEUE ----------
+let isRefreshing = false;
+let failedQueue = [];
 
-// ---------- STORE TOKENS ----------
-axiosInstance.initializeCSRF = async () => {
-  if (Platform.OS !== "web") {
-    try {
-      const response = await axiosInstance.get("/csrf/");
-      const csrfToken = response?.data?.csrf_token;
-      if (csrfToken) {
-        await storeCSRFToken(csrfToken);
-        console.log("✅ CSRF token initialized for mobile:", csrfToken);
-      } else {
-        console.warn("⚠️ CSRF token not found in /csrf/ response.");
-      }
-    } catch (err) {
-      console.error("❌ Failed to initialize CSRF token on mobile:", err);
-    }
-  }
-};
-
-const storeCSRFToken = async (csrfToken) => {
-  if (!csrfToken) return;
-  inMemoryCSRFToken = csrfToken;
-  if (Platform.OS !== "web") await storage.setItem("csrfToken", csrfToken);
+const processQueue = (error, token = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) prom.reject(error);
+    else prom.resolve(token);
+  });
+  failedQueue = [];
 };
 
 // ---------- INTERCEPTORS ----------
 axiosInstance.interceptors.request.use(
   async (config) => {
-    const token = await getAuthToken();
-    const csrfToken = await getCSRFTokenForRequest();
-
-    if (token) {
-      config.headers.Authorization = `Token ${token}`;
-      console.log("🔐 Adding auth token:", token);
-    } else {
-      console.warn("⚠️ No auth token found in storage");
+    const token = await getAccessToken();
+    if (token && !config.url.includes("/api/token/")) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
-
-    if (csrfToken) config.headers["x-csrftoken"] = csrfToken;
-
+    // Do not set Content-Type for FormData
+    if (config.data instanceof FormData) {
+      delete config.headers["Content-Type"];
+    }
     return config;
   },
   (error) => Promise.reject(error)
 );
 
 axiosInstance.interceptors.response.use(
-  (response) => {
-    if (response.config.url?.includes("/login/")) {
-      const token = response.data.token;
-      const csrf = response.data.csrf_token;
-
-      if (token) {
-        inMemoryToken = token;
-        axiosInstance.defaults.headers.common["Authorization"] = `Token ${token}`;
-        storage.setItem("token", token);
-      }
-
-      if (csrf) {
-        storeCSRFToken(csrf);
-      }
-    }
-    return response;
-  },
+  (response) => response,
   async (error) => {
-    const status = error.response?.status;
+    const originalRequest = error.config || {};
 
-    if (status === 403 && /CSRF/i.test(error.response?.data?.detail || "")) {
-      Alert.alert("Security Error", "Session expired. Please log in again.");
-      return Promise.reject(new Error("CSRF validation failed"));
+    if (error.code === "ECONNABORTED") {
+      return Promise.reject(new Error("Request timed out. Please try again."));
     }
 
-    if (status === 401) {
-      inMemoryToken = null;
-      inMemoryCSRFToken = null;
-      await storage.multiRemove([
-        "token", "csrfToken", "username", "role", "className"
-      ]);
-      Alert.alert("Session Expired", "Please log in again.");
-      return Promise.reject(new Error("Unauthorized"));
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      if (originalRequest.url?.includes("/api/token/")) {
+        await clearTokens();
+        Alert.alert("Session Expired", "Please log in again.");
+        return Promise.reject(error);
+      }
+
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        })
+          .then((token) => {
+            originalRequest.headers.Authorization = `Bearer ${token}`;
+            return axiosInstance(originalRequest);
+          })
+          .catch((err) => Promise.reject(err));
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      const refreshToken = await getRefreshToken();
+      if (!refreshToken) {
+        await clearTokens();
+        Alert.alert("Session Expired", "Please log in again.");
+        return Promise.reject(new Error("No refresh token available"));
+      }
+
+      try {
+        const refreshResponse = await axios.post(
+          `${axiosInstance.defaults.baseURL}api/token/refresh/`,
+          { refresh: refreshToken }
+        );
+
+        const { access, refresh } = refreshResponse.data;
+        if (refresh) await setTokens(access, refresh);
+        else await setTokens(access, null);
+
+        processQueue(null, access);
+
+        originalRequest.headers.Authorization = `Bearer ${access}`;
+        return axiosInstance(originalRequest);
+      } catch (refreshError) {
+        processQueue(refreshError, null);
+        await clearTokens();
+        Alert.alert("Session Expired", "Please log in again.");
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
+      }
     }
 
     return Promise.reject(error);
   }
 );
 
+// ---------- AUTH METHODS ----------
+axiosInstance.login = async (username, password) => {
+  const response = await axiosInstance.post("/api/token/", { username, password });
+  const { access, refresh, username: user, role, email, full_name, class_name } = response.data;
+  await setTokens(access, refresh);
+  if (user) await storage.setItem("username", user);
+  if (role) await storage.setItem("userRole", role);
+  if (email) await storage.setItem("userEmail", email);
+  if (full_name) await storage.setItem("fullName", full_name);
+  if (class_name) await storage.setItem("className", class_name);
+  return response.data;
+};
+
+axiosInstance.logout = async () => {
+  try {
+    const refreshToken = await getRefreshToken();
+    if (refreshToken) {
+      await axiosInstance.post("/api/logout/", { refresh_token: refreshToken });
+    }
+  } catch (e) {
+    console.error("Logout error:", e);
+  } finally {
+    await clearTokens();
+  }
+};
+
+axiosInstance.verifyToken = async () => {
+  const token = await getAccessToken();
+  if (!token) throw new Error("No token found");
+  const response = await axiosInstance.post("/api/token/verify/", { token });
+  return response.data;
+};
+
 // ---------- HELPERS ----------
 axiosInstance.uploadFile = async (url, formData, progressCallback) => {
-  const token = await getAuthToken();
-  const csrfToken = await getCSRFTokenForRequest();
+  const token = await getAccessToken();
   const headers = {};
-  if (token) headers.Authorization = `Token ${token}`;
-  if (csrfToken) headers["x-csrftoken"] = csrfToken;
+  if (token) headers.Authorization = `Bearer ${token}`;
 
+  // On native (Android/iOS), use fetch for more reliable multipart uploads
+  if (Platform.OS !== 'web') {
+    const requestUrl = `${axiosInstance.defaults.baseURL.replace(/\/$/, '')}${url.startsWith('/') ? url : `/${url}`}`;
+    const response = await fetch(requestUrl, {
+      method: 'POST',
+      headers, // Do not set Content-Type; let fetch set proper boundary
+      body: formData,
+    });
+    if (!response.ok) {
+      const text = await response.text().catch(() => '');
+      const error = new Error(text || `Upload failed with status ${response.status}`);
+      error.status = response.status;
+      throw error;
+    }
+    // Try to parse JSON, fallback to text
+    let data;
+    const contentType = response.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      data = await response.json();
+    } else {
+      data = await response.text();
+    }
+    return { data, status: response.status, headers: response.headers };
+  }
+
+  // Web: keep axios to support upload progress
   return axiosInstance.post(url, formData, {
+    timeout: 120000,
     headers,
     onUploadProgress: (event) => {
       if (progressCallback && event.total) {
@@ -182,8 +250,9 @@ axiosInstance.uploadFile = async (url, formData, progressCallback) => {
   });
 };
 
+// CSRF helpers kept for API compatibility (no-ops for JWT on mobile)
+axiosInstance.initializeCSRF = async () => {};
 axiosInstance.clearCSRF = async () => {
-  inMemoryCSRFToken = null;
   await storage.removeItem("csrfToken");
 };
 

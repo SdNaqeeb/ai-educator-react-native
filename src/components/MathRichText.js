@@ -120,7 +120,7 @@ const MathRichText = ({ content, style }) => {
       display: block !important;
       margin: 8px 0 !important;
       text-align: center;
-      overflow-x: auto;
+      overflow-x: overlay;
       overflow-y: hidden;
       max-width: 100%;
       padding: 4px 0;
