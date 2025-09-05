@@ -179,37 +179,181 @@ const SolveQuestionScreen = () => {
   };
 
   // Correct handler
-  const handleCorrect = async () => {
-    if (capturedImages.length === 0) {
-      Alert.alert("Error", "Please capture at least one image of your solution.");
-      return;
+// Replace the existing handleCorrect function with this updated version
+
+const handleCorrect = async () => {
+  if (capturedImages.length === 0) {
+    Alert.alert("Error", "Please capture at least one image of your solution.");
+    return;
+  }
+  
+  console.log("Starting handleCorrect function");
+  setProcessingButton("correct");
+  setError(null);
+  const timeSpentMs = stopTimer();
+  const timeSpentMinutes = Math.ceil(timeSpentMs / 60000);
+
+  try {
+    const formData = new FormData();
+    formData.append("class_id", class_id);
+    formData.append("subject_id", subject_id);
+    formData.append("topic_ids", topic_ids);
+    formData.append("question", currentQuestion.question);
+    formData.append("question_id", currentQuestion.question_id);
+    formData.append("subtopic", subtopic);
+    formData.append("correct", "true");
+    formData.append("study_time_seconds", Math.floor(timeSpentMs / 1000).toString());
+    formData.append("study_time_minutes", timeSpentMinutes.toString());
+
+    console.log("FormData prepared", formData);
+
+    // Convert captured images to proper format
+    for (let i = 0; i < capturedImages.length; i++) {
+      const imageUri = capturedImages[i];
+      
+      if (Platform.OS === 'web') {
+        // Web platform handling
+        if (imageUri.startsWith('data:')) {
+          const base64 = imageUri.split(',')[1];
+          const byteCharacters = atob(base64);
+          const byteNumbers = new Array(byteCharacters.length);
+          for (let j = 0; j < byteCharacters.length; j++) {
+            byteNumbers[j] = byteCharacters.charCodeAt(j);
+          }
+          const byteArray = new Uint8Array(byteNumbers);
+          const blob = new Blob([byteArray], { type: 'image/jpeg' });
+          formData.append("ans_img", blob, `solution-${Date.now()}-${i}.jpg`);
+        } else {
+          const response = await fetch(imageUri);
+          const blob = await response.blob();
+          formData.append("ans_img", blob, `solution-${Date.now()}-${i}.jpg`);
+        }
+      } else {
+        // Native platform handling - use proper object structure
+        formData.append("ans_img", {
+          uri: imageUri,
+          type: 'image/jpeg',
+          name: `solution-${Date.now()}-${i}.jpg`,
+        });
+      }
     }
+
+    // Handle question image
+    if (currentQuestion.image) {
+      if (currentQuestion.image.startsWith("data:image")) {
+        // Extract base64 part if it's a data URI
+        const base64Image = currentQuestion.image.split(',')[1] || currentQuestion.image;
+        formData.append("ques_img", base64Image);
+      } else if (currentQuestion.image.startsWith("http")) {
+        try {
+          const imageResponse = await fetch(currentQuestion.image);
+          const blob = await imageResponse.blob();
+          const reader = new FileReader();
+          
+          const base64String = await new Promise((resolve, reject) => {
+            reader.onloadend = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+          
+          const base64Image = base64String.split(',')[1];
+          formData.append("ques_img", base64Image);
+        } catch (fetchError) {
+          console.error("Error fetching question image:", fetchError);
+        }
+      }
+    }
+
+    // Use the uploadFile helper instead of direct post
+    setUploadProgress(0);
+    const response = await axiosInstance.uploadFile(
+      "/anssubmit/",
+      formData,
+      handleUploadProgress
+    );
+
+    console.log("API Response:", response.data);
     
-    console.log("Starting handleCorrect function");
-    setProcessingButton("correct");
-    setError(null);
-    const timeSpentMs = stopTimer();
-    const timeSpentMinutes = Math.ceil(timeSpentMs / 60000);
+    // Reset processing state before navigation
+    setProcessingButton(null);
+    setUploadProgress(0);
 
-    try {
-      const formData = new FormData();
-      formData.append("class_id", class_id);
-      formData.append("subject_id", subject_id);
-      formData.append("topic_ids", topic_ids);
-      formData.append("question", currentQuestion.question);
-      formData.append("question_id", currentQuestion.question_id)
-      formData.append("subtopic", subtopic);
-      formData.append("correct", "true");
-      formData.append("study_time_seconds", Math.floor(timeSpentMs / 1000));
-      formData.append("study_time_minutes", timeSpentMinutes);
+    // Navigate to result page
+    navigation.navigate("Result", {
+      message: response.data.message,
+      ai_data: response.data.ai_data || response.data,
+      actionType: "correct",
+      questionList,
+      class_id,
+      subject_id,
+      topic_ids,
+      subtopic,
+      questionImage: currentQuestion.image,
+      questionNumber: currentQuestionIndex + 1,
+      studentImages: capturedImages,
+      question: currentQuestion.question,
+      userAnswer: userAnswer
+    });
 
-      console.log("data sending", formData)
+    await soundManager.playCorrectAnswer();
+  } catch (error) {
+    console.error("API Error:", error);
+    if (error.message?.includes("timed out")) {
+      setError("Request timed out. Please try with a smaller image or check your connection.");
+    } else if (error.response?.data?.error) {
+      setError(error.response.data.error);
+    } else if (error.message) {
+      setError(error.message);
+    } else {
+      setError("Failed to correct the solution. Please try again.");
+    }
+    setProcessingButton(null);
+    setUploadProgress(0);
+    
+    // Restart timer since submission failed
+    startTimer();
+  }
+};
 
-      // Convert captured images to base64 and append
+  // Generic form data sender
+// Replace the existing sendFormData function with this updated version
+
+const sendFormData = async (flags = {}, actionType) => {
+  setProcessingButton(actionType);
+  setError(null);
+  
+  if (!currentQuestion) {
+    setError("No question available");
+    setProcessingButton(null);
+    return;
+  }
+
+  try {
+    const formData = new FormData();
+    formData.append("class_id", class_id);
+    formData.append("subject_id", subject_id);
+    formData.append("topic_ids", topic_ids);
+    formData.append("question", currentQuestion.question);
+    formData.append("subtopic", subtopic);
+    formData.append("question_id", currentQuestion.question_id);
+
+    // Add user answer if provided
+    if (userAnswer.trim()) {
+      formData.append("user_answer", userAnswer);
+    }
+
+    // Add all flags
+    Object.entries(flags).forEach(([key, value]) => {
+      formData.append(key, value.toString());
+    });
+
+    // Add images if required by the action
+    if (flags.submit && capturedImages.length > 0) {
       for (let i = 0; i < capturedImages.length; i++) {
         const imageUri = capturedImages[i];
         
-        if (Platform.OS === 'web' || imageUri.startsWith('data:')) {
+        if (Platform.OS === 'web') {
+          // Web platform handling
           if (imageUri.startsWith('data:')) {
             const base64 = imageUri.split(',')[1];
             const byteCharacters = atob(base64);
@@ -221,9 +365,12 @@ const SolveQuestionScreen = () => {
             const blob = new Blob([byteArray], { type: 'image/jpeg' });
             formData.append("ans_img", blob, `solution-${Date.now()}-${i}.jpg`);
           } else {
-            formData.append("ans_img", prepareImageForUpload(imageUri));
+            const response = await fetch(imageUri);
+            const blob = await response.blob();
+            formData.append("ans_img", blob, `solution-${Date.now()}-${i}.jpg`);
           }
         } else {
+          // Native platform handling
           formData.append("ans_img", {
             uri: imageUri,
             type: 'image/jpeg',
@@ -231,220 +378,98 @@ const SolveQuestionScreen = () => {
           });
         }
       }
-
-      // Handle question image
-      if (currentQuestion.image) {
-        if (currentQuestion.image.startsWith("data:image")) {
-          formData.append("ques_img", currentQuestion.image);
-        } else if (currentQuestion.image.startsWith("http")) {
-          try {
-            const imageResponse = await fetch(currentQuestion.image);
-            const blob = await imageResponse.blob();
-            const reader = new FileReader();
-            
-            const base64String = await new Promise((resolve, reject) => {
-              reader.onloadend = () => resolve(reader.result);
-              reader.onerror = reject;
-              reader.readAsDataURL(blob);
-            });
-            
-            formData.append("ques_img", base64String);
-          } catch (fetchError) {
-            console.error("Error fetching question image:", fetchError);
-          }
-        }
-      }
-
-      // Send the request
-      setUploadProgress(0);
-      const response = await axiosInstance.post("/anssubmit/", formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-        onUploadProgress: (progressEvent) => {
-          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          handleUploadProgress(percentCompleted);
-        },
-      });
-
-      console.log("API Response:", response.data);
-      
-      // Reset processing state before navigation
-      setProcessingButton(null);
-      setUploadProgress(0);
-
-      // Navigate to result page
-      navigation.navigate("Result", {
-        message: response.data.message,
-        ai_data: response.data.ai_data || response.data,
-        actionType: "correct",
-        questionList,
-        class_id,
-        subject_id,
-        topic_ids,
-        subtopic,
-        questionImage: currentQuestion.image,
-        questionNumber: currentQuestionIndex + 1,
-        studentImages: capturedImages,
-        question: currentQuestion.question,
-        userAnswer: userAnswer
-      });
-
-      await soundManager.playCorrectAnswer();
-    } catch (error) {
-      console.error("API Error:", error);
-      if (error.code === "ECONNABORTED") {
-        setError("Request timed out. Please try with a smaller image or check your connection.");
-      } else if (error.response?.data?.error) {
-        setError(error.response.data.error);
-      } else if (error.friendlyMessage) {
-        setError(error.friendlyMessage);
-      } else {
-        setError("Failed to correct the solution. Please try again.");
-      }
-      setProcessingButton(null);
-      setUploadProgress(0);
-      
-      // Restart timer since submission failed
-      startTimer();
-    }
-  };
-
-  // Generic form data sender
-  const sendFormData = async (flags = {}, actionType) => {
-    setProcessingButton(actionType);
-    setError(null);
-    
-    if (!currentQuestion) {
-      setError("No question available");
-      setProcessingButton(null);
-      return;
     }
 
-    try {
-      const formData = new FormData();
-      formData.append("class_id", class_id);
-      formData.append("subject_id", subject_id);
-      formData.append("topic_ids", topic_ids);
-      formData.append("question", currentQuestion.question);
-      formData.append("subtopic", subtopic);
-      formData.append("question_id", currentQuestion.question_id)
-
-      // Add user answer if provided
-      if (userAnswer.trim()) {
-        formData.append("user_answer", userAnswer);
-      }
-
-      // Add all flags
-      Object.entries(flags).forEach(([key, value]) => {
-        formData.append(key, value.toString());
-      });
-
-      // Add images if required by the action
-      if (flags.submit && capturedImages.length > 0) {
-        for (let i = 0; i < capturedImages.length; i++) {
-          const imageUri = capturedImages[i];
+    // Add question image if available
+    if (currentQuestion.image) {
+      if (currentQuestion.image.startsWith("data:image")) {
+        // Extract base64 part
+        const base64Image = currentQuestion.image.split(',')[1] || currentQuestion.image;
+        formData.append("ques_img", base64Image);
+      } else if (currentQuestion.image.startsWith("http")) {
+        try {
+          const imageResponse = await fetch(currentQuestion.image);
+          const blob = await imageResponse.blob();
+          const reader = new FileReader();
           
-          if (Platform.OS === 'web' || imageUri.startsWith('data:')) {
-            if (imageUri.startsWith('data:')) {
-              const base64 = imageUri.split(',')[1];
-              const byteCharacters = atob(base64);
-              const byteNumbers = new Array(byteCharacters.length);
-              for (let j = 0; j < byteCharacters.length; j++) {
-                byteNumbers[j] = byteCharacters.charCodeAt(j);
-              }
-              const byteArray = new Uint8Array(byteNumbers);
-              const blob = new Blob([byteArray], { type: 'image/jpeg' });
-              formData.append("ans_img", blob, `solution-${Date.now()}-${i}.jpg`);
-            } else {
-              formData.append("ans_img", prepareImageForUpload(imageUri));
-            }
-          } else {
-            formData.append("ans_img", {
-              uri: imageUri,
-              type: 'image/jpeg',
-              name: `solution-${Date.now()}-${i}.jpg`,
-            });
-          }
-        }
-      }
-
-      // Add question image if available
-      if (currentQuestion.image) {
-        if (currentQuestion.image.startsWith("data:image")) {
-          formData.append("ques_img", currentQuestion.image);
-        } else {
+          const base64String = await new Promise((resolve, reject) => {
+            reader.onloadend = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+          
+          const base64Image = base64String.split(',')[1];
+          formData.append("ques_img", base64Image);
+        } catch (fetchError) {
+          console.error("Error fetching question image:", fetchError);
           formData.append("question_img_base64", currentQuestion.image);
         }
       }
-
-      // Send the request
-      const response = await axiosInstance.post("/anssubmit/", formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-        onUploadProgress: (flags.submit && capturedImages.length > 0) ? (progressEvent) => {
-          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          handleUploadProgress(percentCompleted);
-        } : undefined,
-      });
-
-      console.log("API Response:", response.data);
-
-      // Reset processing state before navigation
-      setProcessingButton(null);
-      setUploadProgress(0);
-
-      // Update study session with time info if available
-      if (flags.study_time_minutes) {
-        updateStudySession(
-          new Date().toISOString().split("T")[0],
-          flags.study_time_minutes,
-          1,
-          0
-        );
-      }
-
-      // Navigate to results page
-      navigation.navigate("Result", {
-        message: response.data.message,
-        ai_data: response.data.ai_data || response.data,
-        actionType,
-        questionList,
-        class_id,
-        subject_id,
-        topic_ids,
-        subtopic,
-        questionImage: currentQuestion.image,
-        questionNumber: currentQuestionIndex + 1,
-        studentImages: capturedImages,
-        question: currentQuestion.question,
-        userAnswer: userAnswer
-      });
-
-      // Play appropriate sound
-      if (actionType === 'correct' || actionType === 'submit') {
-        await soundManager.playCorrectAnswer();
-      }
-    } catch (error) {
-      console.error("API Error:", error);
-      
-      if (error.code === "ECONNABORTED") {
-        setError("Request timed out. Please try with a smaller image or check your connection.");
-      } else if (error.response?.data?.error) {
-        setError(error.response.data.error);
-      } else if (error.friendlyMessage) {
-        setError(error.friendlyMessage);
-      } else {
-        setError("Failed to perform the action. Please try again.");
-      }
-      setProcessingButton(null);
-      setUploadProgress(0);
-      
-      // Restart timer since submission failed
-      startTimer();
     }
-  };
+
+    // Use uploadFile helper instead of direct post
+    const response = await axiosInstance.uploadFile(
+      "/anssubmit/",
+      formData,
+      (flags.submit && capturedImages.length > 0) ? handleUploadProgress : undefined
+    );
+
+    console.log("API Response:", response.data);
+
+    // Reset processing state before navigation
+    setProcessingButton(null);
+    setUploadProgress(0);
+
+    // Update study session with time info if available
+    if (flags.study_time_minutes) {
+      updateStudySession(
+        new Date().toISOString().split("T")[0],
+        flags.study_time_minutes,
+        1,
+        0
+      );
+    }
+
+    // Navigate to results page
+    navigation.navigate("Result", {
+      message: response.data.message,
+      ai_data: response.data.ai_data || response.data,
+      actionType,
+      questionList,
+      class_id,
+      subject_id,
+      topic_ids,
+      subtopic,
+      questionImage: currentQuestion.image,
+      questionNumber: currentQuestionIndex + 1,
+      studentImages: capturedImages,
+      question: currentQuestion.question,
+      userAnswer: userAnswer
+    });
+
+    // Play appropriate sound
+    if (actionType === 'correct' || actionType === 'submit') {
+      await soundManager.playCorrectAnswer();
+    }
+  } catch (error) {
+    console.error("API Error:", error);
+    
+    if (error.message?.includes("timed out")) {
+      setError("Request timed out. Please try with a smaller image or check your connection.");
+    } else if (error.response?.data?.error) {
+      setError(error.response.data.error);
+    } else if (error.message) {
+      setError(error.message);
+    } else {
+      setError("Failed to perform the action. Please try again.");
+    }
+    setProcessingButton(null);
+    setUploadProgress(0);
+    
+    // Restart timer since submission failed
+    startTimer();
+  }
+};
 
   const handleNextQuestion = () => {
     if (currentQuestionIndex < questionList.length - 1) {

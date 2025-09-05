@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Smartlearners",
+    "name": "Smart Learners",
     "slug": "ai-educator-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -20,7 +20,7 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.aieducator.mobile",
+      "bundleIdentifier": "com.smartlearners.mobile",
       "infoPlist": {
         "NSCameraUsageDescription": "This app uses camera to capture solution images.",
         "NSPhotoLibraryUsageDescription": "This app accesses photo library to select images."
@@ -31,7 +31,8 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#FFFFFF"
       },
-      "package": "com.aieducator.mobile",
+      "package": "com.smartlearners.mobile",
+      "versionCode": 3,
       "permissions": [
         "CAMERA",
         "READ_EXTERNAL_STORAGE",

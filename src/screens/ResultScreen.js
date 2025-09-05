@@ -492,11 +492,11 @@ const ResultScreen = () => {
                           <View style={styles.exampleSection}>
                             <Text style={styles.exampleTitle}>Example:</Text>
                             <View style={styles.mathContentContainer}>
-                              <MathRichText content={conceptItem.example.problem} />
+                              <MathRichText content={conceptItem.example} />
                             </View>
                             <Text style={styles.exampleTitle}>Solution:</Text>
                             <View style={styles.mathContentContainer}>
-                              <MathRichText content={conceptItem.example.solution} />
+                              <MathRichText content={conceptItem.application} />
                             </View>
                           </View>
                         )}

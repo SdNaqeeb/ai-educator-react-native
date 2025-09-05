@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Image,
   Platform,
+  Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -20,8 +21,7 @@ import axiosInstance from '../api/axiosInstance';
 import MathRichText from '../components/MathRichText';
 
 const HomeworkSubmissionScreen = () => {
-  const [submissionType, setSubmissionType] = useState('text');
-  const [textResponse, setTextResponse] = useState('');
+  const [submissionType, setSubmissionType] = useState('image');
   const [imageFiles, setImageFiles] = useState([]);
   const [imageSourceType, setImageSourceType] = useState('upload');
   const [assignment, setAssignment] = useState(null);
@@ -30,6 +30,8 @@ const HomeworkSubmissionScreen = () => {
   const [success, setSuccess] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [showCameraCapture, setShowCameraCapture] = useState(false);
+  const [zoomVisible, setZoomVisible] = useState(false);
+  const [zoomImageUri, setZoomImageUri] = useState(null);
 
   const route = useRoute();
   const navigation = useNavigation();
@@ -88,12 +90,7 @@ const HomeworkSubmissionScreen = () => {
     setIsSubmitting(true);
     setUploadProgress(0);
 
-    if (submissionType === 'text' && !textResponse.trim()) {
-      setError('Please provide a text response');
-      setIsSubmitting(false);
-      return;
-    }
-    if (submissionType === 'image' && imageFiles.length === 0) {
+    if (imageFiles.length === 0) {
       setError('Please upload or capture at least one image');
       setIsSubmitting(false);
       return;
@@ -103,26 +100,22 @@ const HomeworkSubmissionScreen = () => {
       const formData = new FormData();
       formData.append('homework_code', assignment.homework_code);
       formData.append('student_id', username);
-      formData.append('submission_type', submissionType);
+      formData.append('submission_type', 'image');
 
-      if (submissionType === 'text') {
-        formData.append('text_response', textResponse.trim());
-      } else if (imageFiles.length > 0) {
-        // Append each image separately like the web app does
-        for (const file of imageFiles) {
-          if (Platform.OS === 'web') {
-            // Convert data URL or remote URL to Blob/File for web
-            const response = await fetch(file.uri);
-            const blob = await response.blob();
-            const webFile = new File([blob], file.name || `homework-response-${Date.now()}.jpg`, { type: file.type || blob.type || 'image/jpeg' });
-            formData.append('image_response', webFile);
-          } else {
-            formData.append('image_response', {
-              uri: file.uri,
-              type: file.type || 'image/jpeg',
-              name: file.name || `homework-response-${Date.now()}.jpg`,
-            });
-          }
+      // Append each image separately like the web app does
+      for (const file of imageFiles) {
+        if (Platform.OS === 'web') {
+          // Convert data URL or remote URL to Blob/File for web
+          const response = await fetch(file.uri);
+          const blob = await response.blob();
+          const webFile = new File([blob], file.name || `homework-response-${Date.now()}.jpg`, { type: file.type || blob.type || 'image/jpeg' });
+          formData.append('image_response', webFile);
+        } else {
+          formData.append('image_response', {
+            uri: file.uri,
+            type: file.type || 'image/jpeg',
+            name: file.name || `homework-response-${Date.now()}.jpg`,
+          });
         }
       }
       console.log('Submitting homework:', formData);
@@ -135,7 +128,6 @@ const HomeworkSubmissionScreen = () => {
       );
 
       setSuccess('Homework submitted successfully!');
-      setTextResponse('');
       setImageFiles([]);
       setUploadProgress(0);
 
@@ -146,7 +138,12 @@ const HomeworkSubmissionScreen = () => {
         } else {
           navigation.navigate('StudentTabs', { screen: 'Dashboard' });
         }
+
+        setTimeout(() => {
+          window.location.reload();
+        }, 100);
       }, 2000);
+      
 
     } catch (error) {
       setError(error.response?.data?.message || 'Failed to submit homework');
@@ -211,7 +208,15 @@ const HomeworkSubmissionScreen = () => {
               {/* <Text style={styles.questionText}>{question.question}</Text> */}
               <MathRichText content={question.question} />
               {question.image && (
-                <Image source={{ uri: question.image }} style={styles.questionImage} />
+                <TouchableOpacity
+                  activeOpacity={0.9}
+                  onPress={() => {
+                    setZoomImageUri(question.image);
+                    setZoomVisible(true);
+                  }}
+                >
+                  <Image source={{ uri: question.image }} style={styles.questionImage} />
+                </TouchableOpacity>
               )}
             </View>
           ))}
@@ -251,77 +256,7 @@ const HomeworkSubmissionScreen = () => {
 
         {/* Submission Form */}
         <View style={styles.formCard}>
-          {/* Response Type Selection */}
-          <View style={styles.typeSelector}>
-            <TouchableOpacity
-              style={[
-                styles.typeButton,
-                submissionType === 'text' && styles.activeTypeButton
-              ]}
-              onPress={() => {
-                setSubmissionType('text');
-                setImageFiles([]);
-              }}
-              disabled={isSubmitting}
-            >
-              <Ionicons 
-                name="document-text" 
-                size={20} 
-                color={submissionType === 'text' ? '#ffffff' : '#667eea'} 
-              />
-              <Text style={[
-                styles.typeButtonText,
-                submissionType === 'text' && styles.activeTypeButtonText
-              ]}>
-                Text Response
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.typeButton,
-                submissionType === 'image' && styles.activeTypeButton
-              ]}
-              onPress={() => {
-                setSubmissionType('image');
-                setTextResponse('');
-              }}
-              disabled={isSubmitting}
-            >
-              <Ionicons 
-                name="camera" 
-                size={20} 
-                color={submissionType === 'image' ? '#ffffff' : '#667eea'} 
-              />
-              <Text style={[
-                styles.typeButtonText,
-                submissionType === 'image' && styles.activeTypeButtonText
-              ]}>
-                Image Response
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Text Response */}
-          {submissionType === 'text' && (
-            <View style={styles.textInputContainer}>
-              <Text style={styles.inputLabel}>Your Response</Text>
-              <TextInput
-                style={styles.textInput}
-                value={textResponse}
-                onChangeText={setTextResponse}
-                placeholder="Write your homework response here..."
-                multiline
-                numberOfLines={8}
-                textAlignVertical="top"
-                editable={!isSubmitting}
-              />
-              <Text style={styles.characterCount}>{textResponse.length} characters</Text>
-            </View>
-          )}
-
           {/* Image Response */}
-          {submissionType === 'image' && (
             <View style={styles.imageContainer}>
               {/* Image Source Selection */}
               <View style={styles.sourceSelector}>
@@ -346,26 +281,7 @@ const HomeworkSubmissionScreen = () => {
                   </Text>
                 </TouchableOpacity> */}
 
-                <TouchableOpacity
-                  style={[
-                    styles.sourceButton,
-                    imageSourceType === 'camera' && styles.activeSourceButton
-                  ]}
-                  onPress={() => setImageSourceType('camera')}
-                  disabled={isSubmitting}
-                >
-                  <Ionicons 
-                    name="camera" 
-                    size={20} 
-                    color={imageSourceType === 'camera' ? '#ffffff' : '#667eea'} 
-                  />
-                  <Text style={[
-                    styles.sourceButtonText,
-                    imageSourceType === 'camera' && styles.activeSourceButtonText
-                  ]}>
-                    Take Photos
-                  </Text>
-                </TouchableOpacity>
+             
               </View>
 
               {/* Image Actions */}
@@ -432,23 +348,21 @@ const HomeworkSubmissionScreen = () => {
                 </View>
               )}
             </View>
-          )}
+          )
 
           {/* Submit Button */}
           <TouchableOpacity
             style={[
               styles.submitButton,
               (isSubmitting || 
-                (submissionType === 'image' && imageFiles.length === 0) || 
-                (submissionType === 'text' && !textResponse.trim())) && 
+                imageFiles.length === 0) && 
                 styles.disabledButton
               ]
             }
             onPress={handleSubmit}
             disabled={
               isSubmitting || 
-              (submissionType === 'image' && imageFiles.length === 0) || 
-              (submissionType === 'text' && !textResponse.trim())
+              imageFiles.length === 0
             }
           >
             <LinearGradient
@@ -474,6 +388,40 @@ const HomeworkSubmissionScreen = () => {
       onCapture={handleCapturedImage}
       onClose={() => setShowCameraCapture(false)}
     />
+    {/* Image Zoom Modal */}
+    <Modal
+      visible={zoomVisible}
+      animationType="fade"
+      transparent={true}
+      onRequestClose={() => setZoomVisible(false)}
+    >
+      <View style={styles.zoomBackdrop}>
+        <TouchableOpacity style={styles.zoomCloseArea} activeOpacity={1} onPress={() => setZoomVisible(false)} />
+        <View style={styles.zoomContainer}>
+          <ScrollView
+            contentContainerStyle={styles.zoomScrollContent}
+            maximumZoomScale={4}
+            minimumZoomScale={1}
+            showsHorizontalScrollIndicator={false}
+            showsVerticalScrollIndicator={false}
+            bouncesZoom
+            centerContent
+          >
+            {zoomImageUri && (
+              <Image
+                source={{ uri: zoomImageUri }}
+                style={styles.zoomImage}
+                resizeMode="contain"
+              />
+            )}
+          </ScrollView>
+          <TouchableOpacity style={styles.zoomCloseButton} onPress={() => setZoomVisible(false)}>
+            <Ionicons name="close" size={24} color="#ffffff" />
+          </TouchableOpacity>
+        </View>
+        <TouchableOpacity style={styles.zoomCloseArea} activeOpacity={1} onPress={() => setZoomVisible(false)} />
+      </View>
+    </Modal>
     </>
   );
 };
@@ -540,9 +488,42 @@ const styles = StyleSheet.create({
   },
   questionImage: {
     width: '100%',
-    height: 200,
+    height:'300',
+    objectFit: 'contain',
     borderRadius: 8,
     marginTop: 8,
+  },
+  zoomBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  zoomCloseArea: {
+    flex: 1,
+    alignSelf: 'stretch',
+  },
+  zoomContainer: {
+    width: '100%',
+    height: '80%',
+  },
+  zoomScrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+  },
+  zoomImage: {
+    width: '100%',
+    height: '100%',
+  },
+  zoomCloseButton: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    padding: 8,
+    borderRadius: 16,
   },
   assignmentMeta: {
     marginTop: 16,
