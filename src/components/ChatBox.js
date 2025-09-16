@@ -23,6 +23,7 @@ import * as ImagePicker from "expo-image-picker"
 import { AuthContext } from "../contexts/AuthContext"
 import CameraCapture from "../components/CameraCapture"
 import { BlurView } from 'expo-blur'
+import { Audio } from 'expo-av'
 import axios from "axios"
 import axiosInstance from "../api/axiosInstance"
 
@@ -156,6 +157,14 @@ const ChatBox = () => {
 
   // UI States
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false)
+
+  // Audio States
+  const [isRecording, setIsRecording] = useState(false)
+  const [recording, setRecording] = useState(null)
+  const [sound, setSound] = useState(null)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [currentAudioUrl, setCurrentAudioUrl] = useState(null)
+  const [playingMessageId, setPlayingMessageId] = useState(null) // Added new state
 
   // Refs
   const messagesEndRef = useRef(null)
@@ -296,6 +305,19 @@ const ChatBox = () => {
     }
   }, [connectionStatus])
 
+  // Cleanup audio on unmount - Updated
+  useEffect(() => {
+    return () => {
+      if (sound) {
+        console.log('Cleaning up audio on unmount')
+        sound.stopAsync().then(() => sound.unloadAsync())
+      }
+      if (recording) {
+        recording.stopAndUnloadAsync()
+      }
+    }
+  }, [])
+
   // Add message function
   const addMessage = (message) => {
     messageCounter.current += 1
@@ -363,6 +385,9 @@ const ChatBox = () => {
           headers: { "Content-Type": "multipart/form-data" },
         })
         
+        const audioBase64 = res?.data?.audio
+        const aiAudioUrl = audioBase64 ? `data:audio/mp3;base64,${audioBase64}` : null
+        
         setMessages((prev) => [
           ...prev,
           {
@@ -370,6 +395,7 @@ const ChatBox = () => {
             text: res?.data?.reply || "I've analyzed your image!",
             sender: "ai",
             timestamp: new Date(),
+            audioUrl: aiAudioUrl,
           },
         ])
       } else {
@@ -392,6 +418,9 @@ const ChatBox = () => {
           },
         })
 
+        const audioBase64 = res?.data?.audio
+        const aiAudioUrl = audioBase64 ? `data:audio/mp3;base64,${audioBase64}` : null
+
         setMessages((prev) => [
           ...prev,
           {
@@ -399,6 +428,7 @@ const ChatBox = () => {
             text: res?.data?.reply || "I received your message!",
             sender: "ai",
             timestamp: new Date(),
+            audioUrl: aiAudioUrl,
           },
         ])
       }
@@ -465,6 +495,275 @@ const ChatBox = () => {
     setSelectedImage(null)
     setImagePreview(null)
     setShowImageModal(false)
+  }
+
+  // ====== API Test Function ======
+  const testAPIConnection = async () => {
+    try {
+      console.log("Testing API connection...")
+      const response = await api.get("/")
+      console.log("API connection test successful:", response.status)
+      return true
+    } catch (error) {
+      console.error("API connection test failed:", error.message)
+      return false
+    }
+  }
+
+  // ====== Audio Recording Functions ======
+  const startRecording = async () => {
+    if (isRecording || connectionStatus !== "connected" || !sessionId) return
+    
+    try {
+      console.log('Requesting permissions..')
+      const permission = await Audio.requestPermissionsAsync()
+      if (permission.status !== 'granted') {
+        Alert.alert('Permission required', 'Please grant microphone permission to record audio.')
+        return
+      }
+
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+      })
+
+      console.log('Starting recording..')
+      const { recording } = await Audio.Recording.createAsync(
+        Audio.RecordingOptionsPresets.HIGH_QUALITY
+      )
+      setRecording(recording)
+      setIsRecording(true)
+      console.log('Recording started')
+    } catch (err) {
+      console.error('Failed to start recording', err)
+      Alert.alert('Recording Error', 'Failed to start recording. Please try again.')
+    }
+  }
+
+  const stopRecording = async () => {
+    if (!isRecording || !recording) return
+    
+    try {
+      console.log('Stopping recording..')
+      setIsRecording(false)
+      await recording.stopAndUnloadAsync()
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+      })
+      
+      const uri = recording.getURI()
+      console.log('Recording stopped and stored at', uri)
+      
+      if (uri) {
+        await processAudioFile(uri)
+      }
+      
+      setRecording(null)
+    } catch (err) {
+      console.error('Failed to stop recording', err)
+      Alert.alert('Recording Error', 'Failed to stop recording. Please try again.')
+    }
+  }
+
+  const toggleRecording = async () => {
+    if (isRecording) {
+      await stopRecording()
+    } else {
+      await startRecording()
+    }
+  }
+
+  const processAudioFile = async (audioUri) => {
+    if (!sessionId) return
+    
+    const id = Date.now()
+    setIsLoading(true)
+    
+    // Show processing placeholder
+    addMessage({
+      text: "🎙️ Processing audio...",
+      sender: "user",
+    })
+
+    try {
+      console.log("Processing audio file:", audioUri)
+      console.log("Session ID:", sessionId)
+      console.log("Language:", currentLanguage)
+      
+      // Test API connection first
+      const isAPIConnected = await testAPIConnection()
+      if (!isAPIConnected) {
+        throw new Error("API connection failed")
+      }
+      
+      // Create FormData with proper file format for React Native
+      const formData = new FormData()
+      formData.append("session_id", sessionId)
+      formData.append("language", currentLanguage)
+      
+      // Add student context if available
+      if (studentInfo) {
+        formData.append("student_context", JSON.stringify(studentInfo))
+      }
+      
+      // For React Native, we need to append the file object with proper structure
+      // The key difference is using the correct MIME type and filename
+      formData.append("audio", {
+        uri: audioUri,
+        type: "audio/x-m4a", // Changed from audio/m4a to audio/x-m4a to match API
+        name: `recording_${id}.m4a`,
+      })
+
+      console.log("Sending request to /process-audio")
+      console.log("Full URL:", `${API_URL}/process-audio`)
+      
+      const res = await api.post("/process-audio", formData, {
+        headers: { 
+          "Content-Type": "multipart/form-data",
+          "Accept": "application/json"
+        },
+      })
+      
+      console.log("Audio processing response:", res.data)
+
+      const transcription = res?.data?.transcription || "(no transcription)"
+      const aiText = res?.data?.response || res?.data?.content || ""
+      const audioBase64 = res?.data?.audio || res?.data?.audio_bytes
+      const aiAudioUrl = audioBase64 ? `data:audio/mp3;base64,${audioBase64}` : null
+
+      // Remove processing placeholder and add actual messages
+      setMessages((prev) => {
+        const withoutPlaceholder = prev.filter((m) => m.text !== "🎙️ Processing audio...")
+        return [
+          ...withoutPlaceholder,
+          {
+            id: `user_${id}`,
+            text: transcription,
+            sender: "user",
+            timestamp: new Date(),
+          },
+          {
+            id: `ai_${id + 1}`,
+            text: aiText,
+            sender: "ai",
+            timestamp: new Date(),
+            audioUrl: aiAudioUrl,
+          },
+        ]
+      })
+    } catch (e) {
+      console.error("processAudio error:", e)
+      console.error("Error details:", {
+        message: e.message,
+        status: e.response?.status,
+        statusText: e.response?.statusText,
+        data: e.response?.data,
+        url: e.config?.url,
+        baseURL: e.config?.baseURL
+      })
+      
+      let errorMessage = "❌ Sorry, I couldn't process the audio. Please try again."
+      if (e.response?.status === 404) {
+        errorMessage = "❌ Audio processing endpoint not found. Please check your connection."
+      } else if (e.response?.status === 422) {
+        errorMessage = "❌ Invalid audio format. Please try recording again."
+      } else if (e.response?.status === 400) {
+        errorMessage = "❌ Audio too short or invalid. Please try recording again."
+      }
+      
+      addMessage({
+        text: errorMessage,
+        sender: "ai",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Updated playAudio function with proper play/pause functionality
+  const playAudio = async (audioUrl, messageId) => {
+    try {
+      console.log('playAudio called with:', { audioUrl, messageId, currentMessageId: playingMessageId })
+      
+      // If the same audio is playing, stop it
+      if (playingMessageId === messageId && isPlaying && sound) {
+        console.log('Stopping current audio')
+        await sound.stopAsync()
+        await sound.unloadAsync()
+        setSound(null)
+        setIsPlaying(false)
+        setCurrentAudioUrl(null)
+        setPlayingMessageId(null)
+        return
+      }
+      
+      // If different audio is playing, stop it first
+      if (sound && playingMessageId !== messageId) {
+        console.log('Stopping different audio')
+        try {
+          await sound.stopAsync()
+          await sound.unloadAsync()
+        } catch (error) {
+          console.error('Error stopping previous audio:', error)
+        }
+        setSound(null)
+        setIsPlaying(false)
+        setCurrentAudioUrl(null)
+        setPlayingMessageId(null)
+      }
+      
+      // Create and play new sound
+      console.log('Creating new sound')
+      const { sound: newSound } = await Audio.Sound.createAsync(
+        { uri: audioUrl },
+        { 
+          shouldPlay: true,
+          rate: 1.25,
+          shouldCorrectPitch: true
+        }
+      )
+      
+      setSound(newSound)
+      setCurrentAudioUrl(audioUrl)
+      setPlayingMessageId(messageId)
+      setIsPlaying(true)
+      
+      // Set up playback status update
+      newSound.setOnPlaybackStatusUpdate((status) => {
+        if (status.didJustFinish) {
+          console.log('Audio finished playing')
+          newSound.unloadAsync()
+          setSound(null)
+          setIsPlaying(false)
+          setCurrentAudioUrl(null)
+          setPlayingMessageId(null)
+        }
+      })
+      
+    } catch (error) {
+      console.error('Error in playAudio:', error)
+      setIsPlaying(false)
+      setCurrentAudioUrl(null)
+      setPlayingMessageId(null)
+      setSound(null)
+    }
+  }
+
+  // Optional: Separate stop function
+  const stopAudio = async () => {
+    if (sound) {
+      try {
+        console.log('Stopping audio')
+        await sound.stopAsync()
+        await sound.unloadAsync()
+        setSound(null)
+        setIsPlaying(false)
+        setCurrentAudioUrl(null)
+        setPlayingMessageId(null)
+      } catch (error) {
+        console.error('Error stopping audio:', error)
+      }
+    }
   }
 
   // Clear chat
@@ -825,6 +1124,29 @@ const ChatBox = () => {
                       ]}
                     >
                       {formatMessageText(message.text)}
+                      
+                      {/* Updated Audio playback for AI messages */}
+                      {message.audioUrl && message.sender === "ai" && (
+                        <TouchableOpacity
+                          style={[
+                            styles.audioButton,
+                            playingMessageId === message.id && isPlaying && styles.audioButtonPlaying
+                          ]}
+                          onPress={() => playAudio(message.audioUrl, message.id)}
+                        >
+                          <Ionicons 
+                            name={playingMessageId === message.id && isPlaying ? "pause-circle" : "play-circle"} 
+                            size={24} 
+                            color={playingMessageId === message.id && isPlaying ? "#f44336" : "#3B82F6"} 
+                          />
+                          <Text style={[
+                            styles.audioButtonText,
+                            playingMessageId === message.id && isPlaying && styles.audioButtonTextPlaying
+                          ]}>
+                            {playingMessageId === message.id && isPlaying ? "Pause Audio" : "Play Audio"}
+                          </Text>
+                        </TouchableOpacity>
+                      )}
                     </View>
 
                     {/* Message timestamp */}
@@ -903,6 +1225,28 @@ const ChatBox = () => {
                       name="camera"
                       size={20}
                       color={isLoading || connectionStatus !== "connected" ? "#ccc" : "#666"}
+                    />
+                  </TouchableOpacity>
+
+                  {/* Audio Recording */}
+                  <TouchableOpacity
+                    style={[
+                      styles.inputButton,
+                      isRecording && styles.recordingButton
+                    ]}
+                    onPress={toggleRecording}
+                    disabled={isLoading || connectionStatus !== "connected"}
+                  >
+                    <Ionicons
+                      name={isRecording ? "stop" : "mic"}
+                      size={20}
+                      color={
+                        isRecording 
+                          ? "#fff" 
+                          : isLoading || connectionStatus !== "connected" 
+                            ? "#ccc" 
+                            : "#666"
+                      }
                     />
                   </TouchableOpacity>
 
@@ -1399,6 +1743,50 @@ const styles = StyleSheet.create({
     color: "#6c757d",
     textAlign: "center",
     lineHeight: 16,
+  },
+  audioButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: "#f0f8ff",
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#3B82F6",
+  },
+  audioButtonPlaying: {
+    backgroundColor: "#ffe6e6",
+    borderColor: "#f44336",
+  },
+  audioButtonText: {
+    marginLeft: 6,
+    fontSize: 12,
+    color: "#3B82F6",
+    fontWeight: "500",
+  },
+  audioButtonTextPlaying: {
+    color: "#f44336",
+  },
+  recordingButton: {
+    backgroundColor: "#f44336",
+    borderColor: "#f44336",
+  },
+  audioControls: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 8,
+    gap: 8,
+  },
+  stopButton: {
+    backgroundColor: "#f5f5f5",
+    borderColor: "#ddd",
+  },
+  stopButtonText: {
+    marginLeft: 6,
+    fontSize: 12,
+    color: "#666",
+    fontWeight: "500",
   },
 })
 

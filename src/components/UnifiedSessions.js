@@ -220,13 +220,13 @@ const UnifiedSessions = () => {
           <Ionicons name="calendar-outline" size={14} color="#64748b" />
           <Text style={styles.metaText}>{formatDate(item.submission_date)}</Text>
         </View>
-        <View style={styles.metaRow}>
+        {/* <View style={styles.metaRow}>
           <Ionicons name="information-circle-outline" size={14} color={statusInfo.color} />
           <Text style={[styles.metaText, { color: statusInfo.color, fontWeight: "600" }]}>{statusInfo.status}</Text>
-        </View>
-        <View style={{ height: 4, backgroundColor: "#e2e8f0", borderRadius: 4, marginTop: 8 }}>
+        </View> */}
+        {/* <View style={{ height: 4, backgroundColor: "#e2e8f0", borderRadius: 4, marginTop: 8 }}>
           <View style={{ height: 4, width: `${item.overall_percentage || 0}%`, backgroundColor: statusInfo.color, borderRadius: 4 }} />
-        </View>
+        </View> */}
       </TouchableOpacity>
     );
   };
@@ -406,6 +406,13 @@ const styles = StyleSheet.create({
 });
 
 export default UnifiedSessions;
+
+
+
+
+
+
+
 
 
 

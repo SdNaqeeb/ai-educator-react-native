@@ -14,21 +14,20 @@
     "production": {
       "android": {
         "buildType": "app-bundle",
-        "gradleCommand": ":app:assembleRelease",
+        "gradleCommand": ":app:bundleRelease",
         "env": {
           "EXPO_OPTIMIZE_SIZE": "1"
         }
       },
-      "ios": {
-        
-      }
+      "ios": {}
     },
-    "my_apk_build_profile": { 
+    "my_apk_build_profile": {
       "android": {
         "buildType": "apk",
         "distribution": "internal"
       }
-    }  },
+    }
+  },
   "submit": {
     "production": {}
   }

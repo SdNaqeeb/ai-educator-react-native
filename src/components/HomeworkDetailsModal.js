@@ -37,12 +37,12 @@ const HomeworkDetailsModal = ({ visible, onClose, submission }) => {
               questions.map((q, i) => (
                 <View key={String(i)} style={styles.questionCard}>
                   <Text style={styles.questionTitle}>Q{i + 1}: {q.question}</Text>
-                  <Text style={styles.questionMeta}><Text style={styles.metaStrong}>Topic:</Text> {q.topic || 'N/A'}</Text>
-                  <Text style={styles.questionMeta}><Text style={styles.metaStrong}>Score:</Text> {q.total_score} / {q.max_score}</Text>
-                  <Text style={styles.questionMeta}><Text style={styles.metaStrong}>Category:</Text> {q.answer_category}</Text>
-                  <Text style={styles.questionMeta}><Text style={styles.metaStrong}>Concepts:</Text> {(q.concept_required || []).join(', ') || 'N/A'}</Text>
-                  <Text style={styles.questionMeta}><Text style={styles.metaStrong}>Feedback:</Text> {q.comment || '—'}</Text>
-                  <Text style={styles.questionMeta}><Text style={styles.metaStrong}>Correction:</Text></Text>
+                
+                  <Text style={styles.questionMeta}><Text style={styles.metaStrong}>Score:</Text> {q.total_score} / {q.max_score ||q.max_marks}</Text>
+                  <Text style={styles.questionMeta}><Text style={styles.metaStrong}>Category:</Text> {q.answer_category ||q.error_type}</Text>
+                  <Text style={styles.questionMeta}><Text style={styles.metaStrong}>Concepts:</Text> {(q.concept_required || []).join(', ') ||(q.concepts_required || []).join(', ') }</Text>
+                  <Text style={styles.questionMeta}><Text style={styles.metaStrong}>Feedback:</Text> {q.comment || q.gap_analysis}</Text>
+                  <Text style={styles.questionMeta}><Text style={styles.metaStrong}>Correction:</Text>{q.correction_comment || q.mistakes_made}</Text>
                   <MathRichText content={q.correction_comment} />
                 </View>
               ))

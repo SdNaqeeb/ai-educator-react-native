@@ -68,7 +68,6 @@ const setTokens = async (access, refresh) => {
 const clearTokens = async () => {
   await storage.multiRemove([
     TOKEN_KEY,
-    REFRESH_TOKEN_KEY,
     "token",
     "username",
     "streakData",
@@ -140,7 +139,7 @@ axiosInstance.interceptors.response.use(
 
       const refreshToken = await getRefreshToken();
       if (!refreshToken) {
-        await clearTokens();
+        // await clearTokens();
         Alert.alert("Session Expired", "Please log in again.");
         return Promise.reject(new Error("No refresh token available"));
       }
@@ -189,6 +188,7 @@ axiosInstance.login = async (username, password) => {
 axiosInstance.logout = async () => {
   try {
     const refreshToken = await getRefreshToken();
+    console.log("refresh token",refreshToken)
     if (refreshToken) {
       await axiosInstance.post("/api/logout/", { refresh_token: refreshToken });
     }
