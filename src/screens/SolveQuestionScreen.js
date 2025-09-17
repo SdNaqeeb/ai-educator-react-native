@@ -489,9 +489,9 @@ const sendFormData = async (flags = {}, actionType) => {
         "You have completed all questions in this set.",
         [
           {
-            text: "View Results",
+            text: "Done",
             onPress: () =>
-              navigation.navigate("StudentDash"),
+              navigation.navigate('StudentTabs', { screen: 'Dashboard' }),
           },
         ],
       );

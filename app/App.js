@@ -1,5 +1,4 @@
-import React, {useState} from "react";
-import { NavigationContainer } from "@react-navigation/native";
+import React from "react";
 import { StatusBar } from "expo-status-bar";
 import { StyleSheet, LogBox } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -21,6 +20,8 @@ import RootNavigator from "../src/navigation/RootNavigator";
 // Components
 import ChatBox from "../src/components/ChatBox";
 
+// Import navigation setter from axiosInstance (not used here with expo-router)
+
 // Ignore specific warnings
 LogBox.ignoreLogs([
   "Warning: AsyncStorage has been extracted from react-native",
@@ -39,11 +40,9 @@ export default function App() {
                   <QuestProvider>
                     <TutorialProvider>
                       <CurrentQuestionProvider>
-                        {/* <NavigationContainer> */}
-                          <StatusBar style="auto" />
-                          <RootNavigator />
-                          <ChatBox />
-                        {/* </NavigationContainer> */}
+                        <StatusBar style="auto" />
+                        <RootNavigator />
+                        <ChatBox />
                       </CurrentQuestionProvider>
                     </TutorialProvider>
                   </QuestProvider>

@@ -2,9 +2,23 @@ import axios from "axios";
 import * as SecureStore from "expo-secure-store";
 import { Platform, Alert } from "react-native";
 
+// Global navigation reference
+let navigationRef = null;
+
+export const setNavigationRef = (ref) => {
+  navigationRef = ref;
+};
+
+// Navigate function that can be called from anywhere
+const navigate = (name, params) => {
+  if (navigationRef && navigationRef.isReady()) {
+    navigationRef.navigate(name, params);
+  }
+};
+
 // ---------- STORAGE ----------
-const TOKEN_KEY = "access_token";
-const REFRESH_TOKEN_KEY = "refresh_token";
+const ACCESS_KEY = "accessToken";
+const REFRESH_KEY = "refreshToken";
 
 const storage = {
   async getItem(key) {
@@ -45,7 +59,7 @@ const storage = {
 
 // ---------- CONFIG ----------
 const axiosInstance = axios.create({
-  baseURL: "https://autogen.aieducator.com/",
+  baseURL: "https://autogen.aieducator.com",
   headers: {
     "Content-Type": "application/json",
   },
@@ -54,20 +68,34 @@ const axiosInstance = axios.create({
 
 // ---------- TOKEN HELPERS ----------
 const getAccessToken = async () => {
-  return await storage.getItem(TOKEN_KEY);
+  return await storage.getItem(ACCESS_KEY);
 };
+
 const getRefreshToken = async () => {
-  return await storage.getItem(REFRESH_TOKEN_KEY);
+  return await storage.getItem(REFRESH_KEY);
 };
-const setTokens = async (access, refresh) => {
-  if (access) await storage.setItem(TOKEN_KEY, access);
-  if (refresh) await storage.setItem(REFRESH_TOKEN_KEY, refresh);
-  // Compatibility with existing context expecting "token"
-  if (access) await storage.setItem("token", access);
+
+const setAccessToken = async (token) => {
+  await storage.setItem(ACCESS_KEY, token);
 };
-const clearTokens = async () => {
+
+const setRefreshToken = async (token) => {
+  await storage.setItem(REFRESH_KEY, token);
+};
+
+const clearAccessToken = async () => {
+  await storage.removeItem(ACCESS_KEY);
+};
+
+const clearRefreshToken = async () => {
+  await storage.removeItem(REFRESH_KEY);
+};
+
+const clearAllTokens = async () => {
+  await clearAccessToken();
+  await clearRefreshToken();
+  // Clear other auth-related items
   await storage.multiRemove([
-    TOKEN_KEY,
     "token",
     "username",
     "streakData",
@@ -76,6 +104,8 @@ const clearTokens = async () => {
     "userRole",
     "userEmail",
     "csrfToken",
+    "fullName",
+    "className"
   ]);
 };
 
@@ -117,12 +147,15 @@ axiosInstance.interceptors.response.use(
     }
 
     if (error.response?.status === 401 && !originalRequest._retry) {
+      // If token endpoint itself fails, clear tokens and redirect
       if (originalRequest.url?.includes("/api/token/")) {
-        await clearTokens();
+        await clearAllTokens();
         Alert.alert("Session Expired", "Please log in again.");
+        navigate("Login");
         return Promise.reject(error);
       }
 
+      // If already refreshing, queue the request
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
@@ -139,20 +172,20 @@ axiosInstance.interceptors.response.use(
 
       const refreshToken = await getRefreshToken();
       if (!refreshToken) {
-        // await clearTokens();
+        await clearAllTokens();
         Alert.alert("Session Expired", "Please log in again.");
+        navigate("Login");
         return Promise.reject(new Error("No refresh token available"));
       }
 
       try {
         const refreshResponse = await axios.post(
-          `${axiosInstance.defaults.baseURL}api/token/refresh/`,
+          `${axiosInstance.defaults.baseURL}/api/token/refresh/`,
           { refresh: refreshToken }
         );
 
-        const { access, refresh } = refreshResponse.data;
-        if (refresh) await setTokens(access, refresh);
-        else await setTokens(access, null);
+        const { access } = refreshResponse.data;
+        await setAccessToken(access);
 
         processQueue(null, access);
 
@@ -160,8 +193,9 @@ axiosInstance.interceptors.response.use(
         return axiosInstance(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError, null);
-        await clearTokens();
+        await clearAllTokens();
         Alert.alert("Session Expired", "Please log in again.");
+        navigate("Login");
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
@@ -176,37 +210,45 @@ axiosInstance.interceptors.response.use(
 axiosInstance.login = async (username, password) => {
   const response = await axiosInstance.post("/api/token/", { username, password });
   const { access, refresh, username: user, role, email, full_name, class_name } = response.data;
-  await setTokens(access, refresh);
+  
+  // Set tokens
+  await setAccessToken(access);
+  await setRefreshToken(refresh);
+  
+  // Set other user data for compatibility
   if (user) await storage.setItem("username", user);
   if (role) await storage.setItem("userRole", role);
   if (email) await storage.setItem("userEmail", email);
   if (full_name) await storage.setItem("fullName", full_name);
   if (class_name) await storage.setItem("className", class_name);
+  
+  // Compatibility with existing context expecting "token"
+  await storage.setItem("token", access);
+  
   return response.data;
 };
 
 axiosInstance.logout = async () => {
   try {
     const refreshToken = await getRefreshToken();
-    console.log("refresh token",refreshToken)
     if (refreshToken) {
-      await axiosInstance.post("/api/logout/", { refresh_token: refreshToken });
+      await axiosInstance.post("/api/logout/", { refresh: refreshToken });
     }
   } catch (e) {
     console.error("Logout error:", e);
   } finally {
-    await clearTokens();
+    await clearAllTokens();
   }
 };
 
 axiosInstance.verifyToken = async () => {
   const token = await getAccessToken();
   if (!token) throw new Error("No token found");
-  const response = await axiosInstance.post("/api/token/verify/", { token });
+  const response = await axiosInstance.get("/api/token/verify/");
   return response.data;
 };
 
-// ---------- HELPERS ----------
+// ---------- FILE UPLOAD ----------
 axiosInstance.uploadFile = async (url, formData, progressCallback) => {
   const token = await getAccessToken();
   const headers = {};
@@ -214,40 +256,69 @@ axiosInstance.uploadFile = async (url, formData, progressCallback) => {
 
   // On native (Android/iOS), use fetch for more reliable multipart uploads
   if (Platform.OS !== 'web') {
-    const requestUrl = `${axiosInstance.defaults.baseURL.replace(/\/$/, '')}${url.startsWith('/') ? url : `/${url}`}`;
-    const response = await fetch(requestUrl, {
-      method: 'POST',
-      headers, // Do not set Content-Type; let fetch set proper boundary
-      body: formData,
-    });
-    if (!response.ok) {
-      const text = await response.text().catch(() => '');
-      const error = new Error(text || `Upload failed with status ${response.status}`);
-      error.status = response.status;
+    try {
+      const requestUrl = `${axiosInstance.defaults.baseURL.replace(/\/$/, '')}${url.startsWith('/') ? url : `/${url}`}`;
+      const response = await fetch(requestUrl, {
+        method: 'POST',
+        headers, // Do not set Content-Type; let fetch set proper boundary
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        const text = await response.text().catch(() => '');
+        const error = new Error(text || `Upload failed with status ${response.status}`);
+        error.status = response.status;
+        
+        // Add friendly error messages
+        if (response.status === 413) {
+          error.friendlyMessage = "File too large. Please upload a smaller file.";
+        } else {
+          error.friendlyMessage = "Error uploading file. Please try again.";
+        }
+        
+        throw error;
+      }
+      
+      // Try to parse JSON, fallback to text
+      let data;
+      const contentType = response.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        data = await response.text();
+      }
+      return { data, status: response.status, headers: response.headers };
+    } catch (error) {
+      if (!error.friendlyMessage) {
+        error.friendlyMessage = "Upload failed. Please try again.";
+      }
       throw error;
     }
-    // Try to parse JSON, fallback to text
-    let data;
-    const contentType = response.headers.get('content-type') || '';
-    if (contentType.includes('application/json')) {
-      data = await response.json();
-    } else {
-      data = await response.text();
-    }
-    return { data, status: response.status, headers: response.headers };
   }
 
   // Web: keep axios to support upload progress
-  return axiosInstance.post(url, formData, {
-    timeout: 120000,
-    headers,
-    onUploadProgress: (event) => {
-      if (progressCallback && event.total) {
-        const percent = Math.round((event.loaded * 100) / event.total);
-        progressCallback(percent);
-      }
-    },
-  });
+  try {
+    const response = await axiosInstance.post(url, formData, {
+      timeout: 120000,
+      headers,
+      onUploadProgress: (event) => {
+        if (progressCallback && event.total) {
+          const percent = Math.round((event.loaded * 100) / event.total);
+          progressCallback(percent);
+        }
+      },
+    });
+    return response;
+  } catch (error) {
+    if (error.code === "ECONNABORTED") {
+      error.friendlyMessage = "Upload timed out. Please try again.";
+    } else if (error.response?.status === 413) {
+      error.friendlyMessage = "File too large. Please upload a smaller file.";
+    } else {
+      error.friendlyMessage = "Error uploading file. Please try again.";
+    }
+    throw error;
+  }
 };
 
 // CSRF helpers kept for API compatibility (no-ops for JWT on mobile)

@@ -49,6 +49,47 @@ const SessionDetails = ({ visible, onClose, session }) => {
     return { uri: isData ? maybeBase64 : `data:image/jpeg;base64,${maybeBase64}` };
   };
 
+  const renderSolutionSteps = (steps) => {
+    if (!steps || !Array.isArray(steps) || steps.length === 0) {
+      return <Text style={styles.noStepsText}>No solution steps available.</Text>
+    }
+
+    return (
+      <View style={styles.solutionSteps}>
+        {steps.map((step, index) => {
+          const stepMatch = step.match(/^Step\s+(\d+):\s+(.*)/i)
+          if (stepMatch) {
+            const [_, stepNumber, stepContent] = stepMatch
+            return (
+              <View key={index} style={styles.stepContainer}>
+                <View style={styles.stepHeader}>
+                  <View style={styles.stepNumberContainer}>
+                    <Text style={styles.stepNumber}>{stepNumber}</Text>
+                  </View>
+                  <Text style={styles.stepTitle}>Step {stepNumber}</Text>
+                </View>
+                <View style={styles.stepContentContainer}>
+                  <MathRichText content={stepContent} />
+                </View>
+              </View>
+            )
+          } else {
+            return (
+              <View key={index} style={styles.stepContainer}>
+                <View style={styles.stepNumberContainer}>
+                    <Text style={styles.stepNumber}>{index+1}</Text>
+                  </View>
+                <View style={styles.stepContentContainer}>
+                  <MathRichText content={step} />
+                </View>
+              </View>
+            )
+          }
+        })}
+      </View>
+    )
+  }
+
   return (
     <Modal animationType="slide" transparent visible={visible} onRequestClose={onClose}>
       <View style={styles.backdrop}>
@@ -116,7 +157,7 @@ const SessionDetails = ({ visible, onClose, session }) => {
             <View style={styles.card}>
               <Text style={styles.cardHeader}>AI Answer</Text>
               {/* <Text style={styles.monoText}>{formatAIAnswer(session.ai_answer)}</Text> */}
-              <MathRichText content={(session.ai_answer)} />
+              {renderSolutionSteps(session.ai_answer_array)}
             </View>
 
             {session.comment ? (
@@ -214,15 +255,30 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   cardHeader: {
-    fontSize: 14,
+    fontSize: 18,
     fontWeight: "700",
-    color: "#1f2937",
+    color: "#0072F5",
     marginBottom: 8,
   },
   bodyText: {
     fontSize: 14,
     color: "#111827",
   },
+  stepNumberContainer: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "#3B82F6",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 8,
+  },
+  stepNumber: {
+    fontSize: 12,
+    fontWeight: "600",
+   
+  },
+
   monoText: {
    
     fontSize: 13,

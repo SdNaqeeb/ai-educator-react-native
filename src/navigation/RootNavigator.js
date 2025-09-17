@@ -6,6 +6,9 @@ import { Ionicons } from "@expo/vector-icons";
 // Context
 import { AuthContext } from "../contexts/AuthContext";
 
+// Import navigation setter from axiosInstance
+// (handled at the app root; no NavigationContainer here)
+
 // Auth Screens
 import LoginScreen from "../screens/LoginScreen";
 import SignupScreen from "../screens/SignupScreen";
@@ -143,8 +146,8 @@ function PrivateNavigator() {
   );
 }
 
-// Root Navigator
-export default function RootNavigator() {
+// Main Navigator Component
+function MainNavigator() {
   const { user, isLoading } = useContext(AuthContext);
 
   if (isLoading) {
@@ -163,4 +166,9 @@ export default function RootNavigator() {
       )}
     </Stack.Navigator>
   );
+}
+
+// Root Navigator (no NavigationContainer here; it's provided in app/App.js)
+export default function RootNavigator() {
+  return <MainNavigator />;
 }

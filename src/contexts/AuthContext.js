@@ -3,6 +3,7 @@ import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
 import axiosInstance from "../api/axiosInstance";
 
+
 const storage = {
   async getItem(key) {
     return Platform.OS === "web"
@@ -29,6 +30,7 @@ export const AuthProvider = ({ children }) => {
   const [role, setRole] = useState("");
   const [className, setClassName] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+
 
   useEffect(() => {
     checkAuthState();
@@ -103,12 +105,12 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     try {
       console.log("🚪 Logging out...");
-      await axiosInstance.post('logout/',{},{withCredentials: Platform.OS === "web",})
-      const keysToRemove = [
-        "token", "accessToken", "username", "role", "className", "csrfToken",
-      ];
-      await Promise.all(keysToRemove.map(storage.removeItem));
-      await axiosInstance.clearCSRF();
+      await axiosInstance.logout();
+      // const keysToRemove = [
+      //   "token", "accessToken", "username", "role", "className", "csrfToken",
+      // ];
+      // await Promise.all(keysToRemove.map(storage.removeItem));
+      // await axiosInstance.clearCSRF();
 
       setUser(null);
       setUsername("");
@@ -116,9 +118,11 @@ export const AuthProvider = ({ children }) => {
       setClassName("");
     } catch (error) {
       console.error("❌ Logout error:", error);
+      
+      
     }
   };
-
+ 
   return (
     <AuthContext.Provider value={{ user, username, role, className, isLoading, login, logout, checkAuthState }}>
       {children}

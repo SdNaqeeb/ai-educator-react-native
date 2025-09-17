@@ -301,6 +301,9 @@ const ResultScreen = () => {
           } else {
             return (
               <View key={index} style={styles.stepContainer}>
+                <View style={styles.stepNumberContainer}>
+                    <Text style={styles.stepNumber}>{index+1}</Text>
+                  </View>
                 <View style={styles.stepContentContainer}>
                   <MathRichText content={step} />
                 </View>
