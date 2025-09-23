@@ -15,7 +15,7 @@
   "android": {
     "buildType": "app-bundle",
     "gradleCommand": ":app:bundleRelease",
-    "autoIncrement": true,
+    "autoIncrement": "versionCode",
     "env": { "EXPO_OPTIMIZE_SIZE": "1" }
   },
   "ios": {}

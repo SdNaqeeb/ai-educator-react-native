@@ -12,6 +12,7 @@ import {
   TextInput,
   Alert,
   ActivityIndicator,
+  KeyboardAvoidingView,
   Image,
   Animated,
 } from "react-native"
@@ -34,7 +35,7 @@ const { width, height } = Dimensions.get("window")
 const API_URL = "https://chatbot.smartlearners.ai"
 const api = axios.create({
   baseURL: API_URL,
-  timeout: 30000,
+  timeout: 180000,
 })
 
 const TableComponent = ({ data }) => {
@@ -171,6 +172,8 @@ const ChatBox = () => {
   const messageCounter = useRef(0)
   const hasInitialized = useRef(false)
   const scrollViewRef = useRef(null)
+
+  const [inputText, setInputText]=useState("");
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current
@@ -454,6 +457,8 @@ const ChatBox = () => {
     if (!newMessage.trim() && !selectedImage) return
     await sendMessageBase(newMessage.trim(), selectedImage)
   }
+
+
 
   // Send image with command
   const sendImageWithCommand = async (command) => {
@@ -1322,7 +1327,7 @@ const ChatBox = () => {
         animationOut="zoomOut"
       >
         <View style={styles.imageModalContent}>
-          <Text style={styles.imageModalTitle}>📸 Choose Analysis Type</Text>
+          <Text style={styles.imageModalTitle}>Choose Analysis Type</Text>
 
           {imagePreview && <Image source={{ uri: imagePreview }} style={styles.imagePreview} resizeMode="contain" />}
 
@@ -1347,6 +1352,25 @@ const ChatBox = () => {
               <Text style={styles.optionDescription}>I'll check your answers</Text>
             </TouchableOpacity>
           </View>
+          <View style={styles.inputContainer}>
+      <TextInput
+        style={styles.customInput}
+        onChangeText={(e)=> setInputText(e)}
+        placeholder="Type your message..."
+        placeholderTextColor="#999"
+        
+      />
+      <TouchableOpacity
+        style={[
+          styles.sendBtn,
+          connectionStatus !== "connected" && styles.disabledBtn
+        ]}
+        onPress={() => sendImageWithCommand(inputText)}
+        disabled={connectionStatus !== "connected"}
+      >
+        <Text style={styles.sendBtnText}>Send Input</Text>
+      </TouchableOpacity>
+    </View>
 
           <TouchableOpacity style={styles.cancelImageButton} onPress={clearSelectedFile}>
             <Text style={styles.cancelImageText}>Cancel</Text>
@@ -1519,6 +1543,38 @@ const styles = StyleSheet.create({
   messagesContainer: {
     flex: 1,
   },
+
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 0,
+  },
+  customInput: {
+   
+    borderColor: '#ddd',
+    borderRadius: 8,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    fontSize: 16,
+    marginRight: 10,
+  },
+  sendBtn: {
+    backgroundColor: '#0073FF',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  disabledBtn: {
+    backgroundColor: '#ccc',
+    opacity: 0.6,
+  },
+  sendBtnText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+
+
   messagesContent: {
     padding: 16,
     paddingBottom: 20,

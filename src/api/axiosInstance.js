@@ -63,7 +63,7 @@ const axiosInstance = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
-  timeout: 60000,
+  timeout: 180000,
 });
 
 // ---------- TOKEN HELPERS ----------
@@ -299,7 +299,7 @@ axiosInstance.uploadFile = async (url, formData, progressCallback) => {
   // Web: keep axios to support upload progress
   try {
     const response = await axiosInstance.post(url, formData, {
-      timeout: 120000,
+      timeout: 180000,
       headers,
       onUploadProgress: (event) => {
         if (progressCallback && event.total) {

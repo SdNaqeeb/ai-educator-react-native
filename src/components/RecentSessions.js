@@ -117,7 +117,7 @@ const RecentSessions = () => {
           <Text style={[styles.sessionSubject, { color: getSessionColor(item.subject) }]}>{item.subject}</Text>
           <Text style={styles.sessionChapter}>{getSessionTitle(item)}</Text>
         </View>
-        <View
+        {/* <View
           style={[
             styles.scoreContainer,
             {
@@ -131,7 +131,7 @@ const RecentSessions = () => {
           ]}
         >
           <Text style={styles.scoreText}>{item.student_score ?? 0}%</Text>
-        </View>
+        </View> */}
       </View>
 
       <View style={styles.sessionStats}>

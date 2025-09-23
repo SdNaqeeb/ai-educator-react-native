@@ -1,9 +1,18 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, FlatList, ScrollView } from "react-native";
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  TouchableOpacity, 
+  ActivityIndicator, 
+  FlatList, 
+  ScrollView 
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import axiosInstance from "../api/axiosInstance";
 import SessionDetails from "./SessionDetails";
 import HomeworkDetailsModal from "./HomeworkDetailsModal";
+import ClassworkDetailsModal from "./ClassworkDetailsModal";
 
 const UnifiedSessions = () => {
   const [activeTab, setActiveTab] = useState("self");
@@ -12,12 +21,17 @@ const UnifiedSessions = () => {
   const [loadingSessions, setLoadingSessions] = useState(false);
   const [homeworkSubmissions, setHomeworkSubmissions] = useState([]);
   const [classworkSubmissions, setClassworkSubmissions] = useState([]);
-  const [loadingSubmissions, setLoadingSubmissions] = useState(false);
+  const [loadingHomework, setLoadingHomework] = useState(false);
+  const [loadingClasswork, setLoadingClasswork] = useState(false);
   const [error, setError] = useState(null);
+  
+  // Selection states
   const [selectedSession, setSelectedSession] = useState(null);
   const [showSessionDetails, setShowSessionDetails] = useState(false);
   const [selectedHomework, setSelectedHomework] = useState(null);
   const [showHomeworkModal, setShowHomeworkModal] = useState(false);
+  const [selectedClasswork, setSelectedClasswork] = useState(null);
+  const [showClassworkModal, setShowClassworkModal] = useState(false);
 
   const fetchRecentSessions = useCallback(async () => {
     try {
@@ -27,7 +41,9 @@ const UnifiedSessions = () => {
       if (response?.data?.status === "success" && Array.isArray(response?.data?.sessions)) {
         const allGapData = response.data.sessions.flatMap((session) => {
           try {
-            const parsed = typeof session.session_data === "string" ? JSON.parse(session.session_data) : session.session_data;
+            const parsed = typeof session.session_data === "string" 
+              ? JSON.parse(session.session_data) 
+              : session.session_data;
             return parsed?.gap_analysis_data || [];
           } catch {
             return [];
@@ -44,12 +60,46 @@ const UnifiedSessions = () => {
     }
   }, []);
 
+  const fetchClassworkSubmissions = useCallback(async () => {
+    try {
+      setLoadingClasswork(true);
+      setError(null);
+      const response = await axiosInstance.get('/student-classwork-submissions/');
+      const submissionsArray = Array.isArray(response.data) ? response.data : [];
+
+      const processed = submissionsArray.map((item, idx) => ({
+        submission_id: item.classwork_code || `CW-${idx + 1}`,
+        submission_date: item.submission_date,
+        submitted_file: item.submitted_file,
+        worksheet_id: item.classwork_code,
+        classwork_code: item.classwork_code,
+        total_score: item.score ?? 0,
+        score: item.score ?? 0,
+        max_total_score: item.max_possible_score ?? 0,
+        max_possible_score: item.max_possible_score ?? 0,
+        overall_percentage: item.percentage ?? 0,
+        percentage: item.percentage ?? 0,
+        grade: item.grade ?? 'N/A',
+        questions: item.questions || [],
+        homework_type: 'classwork',
+        raw: item
+      }));
+
+      setClassworkSubmissions(processed);
+    } catch (error) {
+      setError('Failed to fetch classwork submissions');
+    } finally {
+      setLoadingClasswork(false);
+    }
+  }, []);
+
   const fetchHomeworkSubmissions = useCallback(async () => {
     try {
-      setLoadingSubmissions(true);
+      setLoadingHomework(true);
       setError(null);
       const response = await axiosInstance.get("/homework-submission/");
       const submissionsArray = Array.isArray(response?.data) ? response.data : [];
+      
       const processed = submissionsArray.map((item) => {
         if (!item.feedback) {
           return {
@@ -62,7 +112,7 @@ const UnifiedSessions = () => {
             result_json: item.result_json,
             worksheet_id: item.homework || `HW-${item.id}`,
             total_score: item.score || 0,
-            max_total_score: item.max_possible_socre,
+            max_total_score: item.max_possible_score ?? item.max_possible_socre ?? 10,
             overall_percentage: item.score || 0,
             grade: item.score >= 80 ? "A" : item.score >= 60 ? "B" : "C",
             board: "N/A",
@@ -81,6 +131,11 @@ const UnifiedSessions = () => {
             submitted_file: item.submitted_file,
             homework: item.homework,
             homework_type: item.homework_type || "homework",
+            worksheet_id: parsed.worksheet_id || item.homework || `HW-${item.id}`,
+            total_score: parsed.total_score ?? item.score ?? 0,
+            max_total_score: parsed.max_total_score ?? item.max_possible_score ?? item.max_possible_socre ?? 10,
+            overall_percentage: parsed.overall_percentage ?? item.score ?? 0,
+            grade: parsed.grade ?? 'N/A'
           };
         } catch {
           return {
@@ -100,27 +155,32 @@ const UnifiedSessions = () => {
           };
         }
       });
+      
       const homeworkItems = processed.filter((s) => {
-        const worksheetId = s.worksheet_id || s.homework || "";
-        return s.homework_type === "homework" || worksheetId.includes("HW") || worksheetId.includes("homework") || worksheetId.includes("hps");
+        const worksheetId = (s.worksheet_id || s.homework || '').toString().toLowerCase();
+        return s.homework_type === "homework" || 
+               worksheetId.includes("hw") || 
+               worksheetId.includes("homework") || 
+               worksheetId.includes("hps");
       });
-      const classworkItems = processed.filter((s) => {
-        const worksheetId = s.worksheet_id || s.homework || "";
-        return s.homework_type === "classwork" || worksheetId.includes("CW") || worksheetId.includes("classwork");
-      });
+      
       setHomeworkSubmissions(homeworkItems);
-      setClassworkSubmissions(classworkItems);
     } catch (e) {
       setError("Failed to fetch homework submissions");
     } finally {
-      setLoadingSubmissions(false);
+      setLoadingHomework(false);
     }
   }, []);
 
   useEffect(() => {
-    if (activeTab === "self") fetchRecentSessions();
-    if (activeTab !== "self") fetchHomeworkSubmissions();
-  }, [activeTab, fetchRecentSessions, fetchHomeworkSubmissions]);
+    if (activeTab === "self") {
+      fetchRecentSessions();
+    } else if (activeTab === "classwork") {
+      fetchClassworkSubmissions();
+    } else if (activeTab === "homework") {
+      fetchHomeworkSubmissions();
+    }
+  }, [activeTab, fetchRecentSessions, fetchClassworkSubmissions, fetchHomeworkSubmissions]);
 
   const filteredData = useMemo(() => {
     if (activeTab === "self") return recentSessions;
@@ -128,7 +188,10 @@ const UnifiedSessions = () => {
     return homeworkSubmissions;
   }, [activeTab, recentSessions, classworkSubmissions, homeworkSubmissions]);
 
-  const isLoading = (activeTab === "self" && loadingSessions) || ((activeTab === "classwork" || activeTab === "homework") && loadingSubmissions);
+  const isLoading = 
+    (activeTab === "self" && loadingSessions) || 
+    (activeTab === "classwork" && loadingClasswork) || 
+    (activeTab === "homework" && loadingHomework);
 
   const formatTimeAgo = (timestamp) => {
     if (!timestamp) return "";
@@ -151,7 +214,8 @@ const UnifiedSessions = () => {
 
   const getSessionColor = (subject) => {
     if (subject && subject.toLowerCase().includes("math")) return "#34A853";
-    if (subject && (subject.toLowerCase().includes("code") || subject.toLowerCase().includes("computer"))) return "#4285F4";
+    if (subject && (subject.toLowerCase().includes("code") || subject.toLowerCase().includes("computer"))) 
+      return "#4285F4";
     if (subject && subject.toLowerCase().includes("physics")) return "#FBBC05";
     if (subject && subject.toLowerCase().includes("chemistry")) return "#EA4335";
     if (subject && subject.toLowerCase().includes("biology")) return "#8E44AD";
@@ -170,18 +234,27 @@ const UnifiedSessions = () => {
     <TouchableOpacity
       key={String(index)}
       style={[styles.card, { borderLeftColor: getSessionColor(item.subject), borderLeftWidth: 4 }]}
-      onPress={() => { setSelectedSession(item); setShowSessionDetails(true); }}
+      onPress={() => { 
+        setSelectedSession(item); 
+        setShowSessionDetails(true); 
+      }}
       activeOpacity={0.85}
     >
       <View style={styles.rowBetween}>
         <View style={{ flex: 1 }}>
-          <Text style={[styles.titleSm, { color: getSessionColor(item.subject) }]}>{getSessionTitle(item)}</Text>
+          <Text style={[styles.titleSm, { color: getSessionColor(item.subject) }]}>
+            {getSessionTitle(item)}
+          </Text>
           <View style={styles.metaRow}>
             <Ionicons name="time-outline" size={14} color="#64748b" />
             <Text style={styles.metaText}>{formatTimeAgo(item.date)}</Text>
           </View>
         </View>
-        <View style={[styles.scorePill, { backgroundColor: (item.student_score ?? 0) >= 80 ? "#10b981" : (item.student_score ?? 0) >= 60 ? "#f59e0b" : "#ef4444" }]}>
+        <View style={[
+          styles.scorePill, 
+          { backgroundColor: (item.student_score ?? 0) >= 80 ? "#10b981" : 
+                           (item.student_score ?? 0) >= 60 ? "#f59e0b" : "#ef4444" }
+        ]}>
           <Text style={styles.scoreText}>{item.student_score ?? 0}%</Text>
         </View>
       </View>
@@ -189,7 +262,7 @@ const UnifiedSessions = () => {
   );
 
   const getStatusInfo = (submission) => {
-    const percentage = submission.overall_percentage || 0;
+    const percentage = submission.overall_percentage || submission.percentage || 0;
     if (percentage >= 80) return { color: "#34A853", status: "Excellent" };
     if (percentage >= 60) return { color: "#FBBC05", status: "Good" };
     return { color: "#EA4335", status: "Needs Improvement" };
@@ -199,34 +272,58 @@ const UnifiedSessions = () => {
     if (!timestamp) return "N/A";
     try {
       const date = new Date(timestamp);
-      return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" });
+      return date.toLocaleDateString("en-US", { 
+        month: "short", 
+        day: "numeric", 
+        year: "numeric", 
+        hour: "2-digit", 
+        minute: "2-digit" 
+      });
     } catch {
       return "N/A";
     }
   };
 
-  const renderSubmissionItem = ({ item, index }) => {
+  const renderHomeworkItem = ({ item, index }) => {
     const statusInfo = getStatusInfo(item);
-    const worksheetId = item.worksheet_id || item.homework || `Submission-${item.submission_id}`;
+    const worksheetId = item.worksheet_id || item.homework || `HW-${item.submission_id}`;
     return (
       <TouchableOpacity
         key={String(index)}
         style={[styles.card, { borderLeftColor: statusInfo.color, borderLeftWidth: 4 }]}
         activeOpacity={0.85}
-        onPress={() => { setSelectedHomework(item); setShowHomeworkModal(true); }}
+        onPress={() => { 
+          setSelectedHomework(item); 
+          setShowHomeworkModal(true); 
+        }}
       >
         <Text style={styles.titleSm}>{worksheetId}</Text>
         <View style={styles.metaRow}>
           <Ionicons name="calendar-outline" size={14} color="#64748b" />
           <Text style={styles.metaText}>{formatDate(item.submission_date)}</Text>
         </View>
-        {/* <View style={styles.metaRow}>
-          <Ionicons name="information-circle-outline" size={14} color={statusInfo.color} />
-          <Text style={[styles.metaText, { color: statusInfo.color, fontWeight: "600" }]}>{statusInfo.status}</Text>
-        </View> */}
-        {/* <View style={{ height: 4, backgroundColor: "#e2e8f0", borderRadius: 4, marginTop: 8 }}>
-          <View style={{ height: 4, width: `${item.overall_percentage || 0}%`, backgroundColor: statusInfo.color, borderRadius: 4 }} />
-        </View> */}
+      </TouchableOpacity>
+    );
+  };
+
+  const renderClassworkItem = ({ item, index }) => {
+    const statusInfo = getStatusInfo(item);
+    const worksheetId = item.classwork_code || item.worksheet_id || `CW-${item.submission_id}`;
+    return (
+      <TouchableOpacity
+        key={String(index)}
+        style={[styles.card, { borderLeftColor: statusInfo.color, borderLeftWidth: 4 }]}
+        activeOpacity={0.85}
+        onPress={() => { 
+          setSelectedClasswork(item); 
+          setShowClassworkModal(true); 
+        }}
+      >
+        <Text style={styles.titleSm}>{worksheetId}</Text>
+        <View style={styles.metaRow}>
+          <Ionicons name="calendar-outline" size={14} color="#64748b" />
+          <Text style={styles.metaText}>{formatDate(item.submission_date)}</Text>
+        </View>
       </TouchableOpacity>
     );
   };
@@ -235,6 +332,12 @@ const UnifiedSessions = () => {
     if (tab === "self") return recentSessions.length;
     if (tab === "classwork") return classworkSubmissions.length;
     return homeworkSubmissions.length;
+  };
+
+  const handleRetry = () => {
+    if (activeTab === "self") fetchRecentSessions();
+    else if (activeTab === "classwork") fetchClassworkSubmissions();
+    else fetchHomeworkSubmissions();
   };
 
   return (
@@ -249,8 +352,16 @@ const UnifiedSessions = () => {
           { key: "classwork", label: "Classwork", icon: "school" },
           { key: "homework", label: "Homework", icon: "home" },
         ].map((tab) => (
-          <TouchableOpacity key={tab.key} onPress={() => setActiveTab(tab.key)} style={[styles.tab, activeTab === tab.key && styles.activeTab]}> 
-            <Ionicons name={`${tab.icon}-outline`} size={16} color={activeTab === tab.key ? "#ffffff" : "#334155"} />
+          <TouchableOpacity 
+            key={tab.key} 
+            onPress={() => setActiveTab(tab.key)} 
+            style={[styles.tab, activeTab === tab.key && styles.activeTab]}
+          > 
+            <Ionicons 
+              name={`${tab.icon}-outline`} 
+              size={16} 
+              color={activeTab === tab.key ? "#ffffff" : "#334155"} 
+            />
             <Text style={[styles.tabText, activeTab === tab.key && styles.activeTabText]}>
               {tab.label} ({getTabCount(tab.key)})
             </Text>
@@ -267,19 +378,27 @@ const UnifiedSessions = () => {
           <Ionicons name="warning-outline" size={24} color="#ef4444" />
           <Text style={[styles.emptyTitle, { color: "#ef4444" }]}>Failed to load</Text>
           <Text style={styles.emptyText}>{error}</Text>
-          <TouchableOpacity onPress={() => (activeTab === "self" ? fetchRecentSessions() : fetchHomeworkSubmissions())} style={styles.retryButton}>
+          <TouchableOpacity onPress={handleRetry} style={styles.retryButton}>
             <Text style={styles.retryButtonText}>Retry</Text>
           </TouchableOpacity>
         </View>
       ) : filteredData.length === 0 ? (
         <View style={styles.centerContent}>
           <Ionicons name="leaf-outline" size={48} color="#94a3b8" />
-          <Text style={styles.emptyTitle}>{activeTab === "self" ? "You have not attempted any questions in recent sessions." : `No ${activeTab} submissions found.`}</Text>
+          <Text style={styles.emptyTitle}>
+            {activeTab === "self" 
+              ? "You have not attempted any questions in recent sessions." 
+              : `No ${activeTab} submissions found.`}
+          </Text>
         </View>
       ) : (
         <FlatList
           data={filteredData}
-          renderItem={activeTab === "self" ? renderSessionItem : renderSubmissionItem}
+          renderItem={
+            activeTab === "self" ? renderSessionItem : 
+            activeTab === "homework" ? renderHomeworkItem : 
+            renderClassworkItem
+          }
           keyExtractor={(_, index) => String(index)}
           showsVerticalScrollIndicator={false}
           scrollEnabled={false}
@@ -287,8 +406,23 @@ const UnifiedSessions = () => {
         />
       )}
 
-      <SessionDetails visible={showSessionDetails} onClose={() => setShowSessionDetails(false)} session={selectedSession} />
-      <HomeworkDetailsModal visible={showHomeworkModal} onClose={() => setShowHomeworkModal(false)} submission={selectedHomework} />
+      <SessionDetails 
+        visible={showSessionDetails} 
+        onClose={() => setShowSessionDetails(false)} 
+        session={selectedSession} 
+      />
+      
+      <HomeworkDetailsModal 
+        visible={showHomeworkModal} 
+        onClose={() => setShowHomeworkModal(false)} 
+        submission={selectedHomework} 
+      />
+      
+      <ClassworkDetailsModal 
+        visible={showClassworkModal} 
+        onClose={() => setShowClassworkModal(false)} 
+        submission={selectedClasswork} 
+      />
     </View>
   );
 };
@@ -406,23 +540,3 @@ const styles = StyleSheet.create({
 });
 
 export default UnifiedSessions;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
