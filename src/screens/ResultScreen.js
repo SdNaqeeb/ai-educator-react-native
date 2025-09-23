@@ -616,11 +616,11 @@ const ResultScreen = () => {
 
       {/* Bottom Buttons */}
       <View style={[styles.bottomButtons, { paddingBottom: insets.bottom }]}>
-        <TouchableOpacity style={styles.bottomButton} onPress={handleQuestionList} activeOpacity={0.8}>
+        {/* <TouchableOpacity style={styles.bottomButton} onPress={handleQuestionList} activeOpacity={0.8}>
           <Ionicons name="list-outline" size={18} color="#6B7280" />
           <Text style={styles.bottomButtonText}>Question List</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
+        </TouchableOpacity> */}
+        {/* <TouchableOpacity
           style={[styles.bottomButton, styles.primaryButton]}
           onPress={handlePracticeSimilar}
           activeOpacity={0.8}
@@ -629,7 +629,7 @@ const ResultScreen = () => {
             <Ionicons name="refresh-outline" size={18} color="#ffffff" />
             <Text style={[styles.bottomButtonText, styles.primaryButtonText]}>Similar Questions</Text>
           </LinearGradient>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
       </View>
     </View>
   )

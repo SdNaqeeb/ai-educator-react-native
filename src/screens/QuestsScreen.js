@@ -25,6 +25,7 @@ const QuestsScreen = () => {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f8fafc" },
   header: {
+    marginTop: 30,
     flexDirection: "row",
     alignItems: "center",
     padding: 20,

@@ -40,6 +40,7 @@ export const AuthProvider = ({ children }) => {
     try {
       console.log("🔍 Checking authentication state...");
       const token = await storage.getItem("token");
+      const refreshToken = await storage.getItem("refreshToken");
       const storedUsername = await storage.getItem("username");
       const storedRole = await storage.getItem("role");
       const storedClassName = await storage.getItem("className");
@@ -51,7 +52,8 @@ export const AuthProvider = ({ children }) => {
         className: storedClassName,
       });
 
-      if (token && storedUsername) {
+      // Require both access and refresh tokens for a valid session
+      if (token && refreshToken && storedUsername) {
         setUser(token);
         setUsername(storedUsername);
         setRole(storedRole || "student");
@@ -106,20 +108,13 @@ export const AuthProvider = ({ children }) => {
     try {
       console.log("🚪 Logging out...");
       await axiosInstance.logout();
-      // const keysToRemove = [
-      //   "token", "accessToken", "username", "role", "className", "csrfToken",
-      // ];
-      // await Promise.all(keysToRemove.map(storage.removeItem));
-      // await axiosInstance.clearCSRF();
-
+    } catch (error) {
+      console.error("❌ Logout error:", error);
+    } finally {
       setUser(null);
       setUsername("");
       setRole("");
       setClassName("");
-    } catch (error) {
-      console.error("❌ Logout error:", error);
-      
-      
     }
   };
  

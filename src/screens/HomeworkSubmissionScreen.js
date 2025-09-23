@@ -19,6 +19,7 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import { AuthContext } from '../contexts/AuthContext';
 import axiosInstance from '../api/axiosInstance';
 import MathRichText from '../components/MathRichText';
+import KeyboardAwareScreen from '../components/KeyboardAwareScreen';
 
 const HomeworkSubmissionScreen = () => {
   const [submissionType, setSubmissionType] = useState('image');
@@ -140,7 +141,9 @@ const HomeworkSubmissionScreen = () => {
         }
 
         setTimeout(() => {
-          window.location.reload();
+          if (Platform.OS === 'web') {
+            window.location.reload();
+          }
         }, 100);
       }, 2000);
       
@@ -181,8 +184,8 @@ const HomeworkSubmissionScreen = () => {
   }
 
   return (
-    <>
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <KeyboardAwareScreen contentContainerStyle={{ paddingHorizontal: 16 }}>
+      <View style={styles.container}>
       {/* Header */}
       <LinearGradient colors={['#3B82F6', '#8B5CF6']} style={styles.header}>
         <TouchableOpacity 
@@ -381,7 +384,7 @@ const HomeworkSubmissionScreen = () => {
           </TouchableOpacity>
         </View>
       </View>
-    </ScrollView>
+      </View>
     {/* Camera / Gallery Modal */}
     <CameraCapture 
       visible={showCameraCapture}
@@ -422,7 +425,7 @@ const HomeworkSubmissionScreen = () => {
         <TouchableOpacity style={styles.zoomCloseArea} activeOpacity={1} onPress={() => setZoomVisible(false)} />
       </View>
     </Modal>
-    </>
+    </KeyboardAwareScreen>
   );
 };
 

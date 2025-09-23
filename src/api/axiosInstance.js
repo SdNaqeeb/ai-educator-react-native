@@ -102,6 +102,7 @@ const clearAllTokens = async () => {
     "rewardData",
     "completedChapters",
     "userRole",
+    "role",
     "userEmail",
     "csrfToken",
     "fullName",

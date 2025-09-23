@@ -17,6 +17,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useNavigation } from "@react-navigation/native";
 import { AuthContext } from "../contexts/AuthContext";
 import axiosInstance from "../api/axiosInstance";
+import KeyboardAwareScreen from "../components/KeyboardAwareScreen";
 
 const { width, height } = Dimensions.get("window");
 
@@ -166,15 +167,7 @@ const LoginScreen = () => {
       locations={[0, 0.5, 1]}
       style={styles.container}
     >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.keyboardAvoidingView}
-      >
-        <ScrollView
-          contentContainerStyle={styles.scrollContainer}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
+      <KeyboardAwareScreen contentContainerStyle={styles.scrollContainer}>
           {/* Subtle Background Elements */}
           {backgroundElements.map((_, index) => renderBackgroundElement(index))}
 
@@ -333,8 +326,7 @@ const LoginScreen = () => {
           <Text style={styles.copyright}>
             © 2025 AI Educator. All rights reserved.
           </Text>
-        </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardAwareScreen>
     </LinearGradient>
   );
 };

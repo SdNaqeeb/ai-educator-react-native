@@ -29,6 +29,8 @@ import CameraCapture from "../components/CameraCapture";
 
 const { width, height } = Dimensions.get("window");
 
+import KeyboardAwareScreen from '../components/KeyboardAwareScreen';
+
 const SolveQuestionScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
@@ -550,7 +552,8 @@ const sendFormData = async (flags = {}, actionType) => {
   }
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <KeyboardAwareScreen contentContainerStyle={{ paddingHorizontal: 0 }}>
+      <View style={[styles.container]}>
       {/* Header */}
       <LinearGradient 
         colors={["#3B82F6", "#6366F1", "#8B5CF6"]} 
@@ -741,7 +744,32 @@ const sendFormData = async (flags = {}, actionType) => {
               )}
             </LinearGradient>
           </TouchableOpacity>
+          
           <TouchableOpacity
+            style={[styles.actionButton, styles.explainButton]}
+            onPress={handleExplain}
+            disabled={isAnyButtonProcessing()}
+            activeOpacity={0.9}
+          >
+            <LinearGradient
+              colors={["#8B5CF6", "#7C3AED"]}
+              style={styles.actionButtonGradient}
+            >
+              {isButtonProcessing("explain") ? (
+                <ActivityIndicator color="#ffffff" />
+              ) : (
+                <>
+                  <Ionicons name="help-circle-outline" size={18} color="#ffffff" />
+                  <Text style={styles.actionButtonText}>Explain</Text>
+                </>
+              )}
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
+        
+        {/* Secondary Action Buttons Row */}
+        <View style={styles.actionButtonsRow}>
+        <TouchableOpacity
             style={[
               styles.actionButton,
               styles.correctButton,
@@ -765,31 +793,7 @@ const sendFormData = async (flags = {}, actionType) => {
               )}
             </LinearGradient>
           </TouchableOpacity>
-        </View>
-        
-        {/* Secondary Action Buttons Row */}
-        <View style={styles.actionButtonsRow}>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.explainButton]}
-            onPress={handleExplain}
-            disabled={isAnyButtonProcessing()}
-            activeOpacity={0.9}
-          >
-            <LinearGradient
-              colors={["#8B5CF6", "#7C3AED"]}
-              style={styles.actionButtonGradient}
-            >
-              {isButtonProcessing("explain") ? (
-                <ActivityIndicator color="#ffffff" />
-              ) : (
-                <>
-                  <Ionicons name="help-circle-outline" size={18} color="#ffffff" />
-                  <Text style={styles.actionButtonText}>Explain</Text>
-                </>
-              )}
-            </LinearGradient>
-          </TouchableOpacity>
-          <TouchableOpacity
+          {/* <TouchableOpacity
             style={[
               styles.actionButton,
               styles.submitButton,
@@ -812,7 +816,7 @@ const sendFormData = async (flags = {}, actionType) => {
                 </>
               )}
             </LinearGradient>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
         </View>
       </View>
 
@@ -825,12 +829,15 @@ const sendFormData = async (flags = {}, actionType) => {
         />
       )}
     </View>
+    </KeyboardAwareScreen>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    padding:0,
+    margin:0,
     backgroundColor: "#F8FAFC",
   },
   header: {
