@@ -184,7 +184,7 @@ const HomeworkSubmissionScreen = () => {
   }
 
   return (
-    <KeyboardAwareScreen contentContainerStyle={{ paddingHorizontal: 16 }}>
+    <KeyboardAwareScreen contentContainerStyle={{ paddingHorizontal: 0 }}>
       <View style={styles.container}>
       {/* Header */}
       <LinearGradient colors={['#3B82F6', '#8B5CF6']} style={styles.header}>
